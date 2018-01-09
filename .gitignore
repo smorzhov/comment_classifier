@@ -63,6 +63,7 @@ node_modules
 .vscode-test
 
 # Project specific
-src/data/
-src/input/
-src/log/
+src/data/*
+!src/data/stopwords.txt
+src/input/*
+src/log/*
