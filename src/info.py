@@ -4,6 +4,7 @@ Prints some information about training data
 Usage: python info.py
 """
 import codecs
+import string
 import re
 from threading import Thread
 from os import path
@@ -30,6 +31,12 @@ def freq_dist(train_data, result, top=50, low=50):
 
     # Remove numbers, '\\n', hex numbers starts with \\x
     words = [re.sub(r'\d+|\\n|\\x[0-9a-f]+', '', word) for word in words]
+
+    # Remove punctuation
+    table = str.maketrans('', '', string.punctuation)
+    stripped = [word.translate(table) for word in words]
+    # Remove remaining tokens that are not alphabetic
+    words = [word for word in stripped if word.isalpha()]
 
     # Lowercase all words (default_stopwords are lowercase too)
     words = [word.lower() for word in words]
