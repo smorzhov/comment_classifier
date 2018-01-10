@@ -35,8 +35,8 @@ def freq_dist(train_data, result, top=50, low=50):
     words = [word.lower() for word in words]
 
     # Stemming words
-    stemmer = nltk.stem.snowball.SnowballStemmer('english')
-    words = [stemmer.stem(word) for word in words]
+    # stemmer = nltk.stem.snowball.SnowballStemmer('english')
+    # words = [stemmer.stem(word) for word in words]
 
     # Remove stopwords
     words = [word for word in words if word not in stopwords]
