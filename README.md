@@ -25,5 +25,5 @@ You will need the following things properly installed on your computer.
     ```
 3. Create some files with useful information about training data
     ```bash
-    nvidia-docker exec tcc python info.py
+    nvidia-docker exec tcc python3 info.py
     ```
