@@ -1,21 +1,22 @@
 FROM gw000/keras:2.1.1-py3-tf-gpu
 
+COPY install.py install.py
+
+VOLUME ["/comment_classifier"]
+
 # Run the copied file and install some dependencies
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
-    bash \
     python3-matplotlib && \
     apt-get clean && \
+    chmod +x /comment_classifier && \
     pip3 --no-cache-dir install --upgrade \
-    numpy \
-    scipy \
-    pandas \
+    gensim \
     nltk \
-    gensim
+    numpy \
+    pandas \
+    scipy && \
+    python3 install.py && \
+    rm -f install.py
 
 WORKDIR /comment_classifier
-
-VOLUME ["/comment_classifier"]
-RUN chmod +x /comment_classifier
-
-ENTRYPOINT python3 install.py
