@@ -27,3 +27,7 @@ You will need the following things properly installed on your computer.
     ```bash
     nvidia-docker exec tcc python3 info.py
     ```
+
+## Advices
+
+You can add some custom stop words. They must be placed in `~src/data/stopwords.txt` file (one word per line).
