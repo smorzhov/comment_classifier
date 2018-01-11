@@ -21,7 +21,7 @@ You will need the following things properly installed on your computer.
     ```
     Run container
     ```bash
-    nvidia-docker run -v $PWD/src:/art_classifier -dt --name tcc sm_keras:gpu /bin/bash
+    nvidia-docker run -v $PWD/src:/comment_classifier -dt --name tcc sm_keras:gpu /bin/bash
     ```
 3. Create some files with useful information about training data
     ```bash
