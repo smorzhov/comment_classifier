@@ -1,14 +1,16 @@
-FROM  ???
+FROM gw000/keras:2.1.1-py3-tf-gpu
 
-# Copy the file into docker
-COPY requirements.txt requirements.txt
-
-# Run the copied file
-RUN pip install -r requirements.txt && \
+# Run the copied file and install some dependencies
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y && \
+    python-matplotlib && \
     apt-get clean && \
-    rm requirements.txt && \
-    rm -rf /var/lib/apt/lists/*
-    
+    pip --no-cache-dir install --upgrade && \
+    numpy \
+    scipy \
+    pandas \
+    nltk \
+    gensim
 
 WORKDIR /comment_classifier
 
