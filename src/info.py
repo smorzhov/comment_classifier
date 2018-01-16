@@ -10,17 +10,17 @@ from threading import Thread
 from os import path
 import nltk
 import pandas as pd
-from utils import DATA_PATH, LOG_PATH, try_makedirs
+from utils import RAW_DATA_PATH, LOG_PATH, try_makedirs
 
 
 def freq_dist(train_data, result, top=50, low=50):
     """Returns the most and the least popular words in `data`"""
     data = train_data['comment_text'].str.encode('utf-8').to_string()
 
-    # NLTK's default German stopwords
+    # NLTK's default English stopwords
     default_stopwords = set(nltk.corpus.stopwords.words('english'))
     custom_stopwords = set(
-        codecs.open(path.join(DATA_PATH, 'stopwords.txt'), 'r', 'utf-8')
+        codecs.open(path.join(RAW_DATA_PATH, 'stopwords.txt'), 'r', 'utf-8')
         .read().splitlines())
     stopwords = default_stopwords | custom_stopwords
     words = nltk.word_tokenize(data)
@@ -84,7 +84,7 @@ def create_freq_dist(data, file_name):
 
 
 def main():
-    train_data = pd.read_csv(path.join(DATA_PATH, 'train.csv'))
+    train_data = pd.read_csv(path.join(RAW_DATA_PATH, 'train.csv'))
     result = {}
 
     get_labels = Thread(target=freq_labels, args=(train_data, result))
