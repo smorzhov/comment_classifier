@@ -2,7 +2,7 @@
 It cleans comments
 
 Usage: python3 data_cleaner [-h]
-Also, it can be import into another module
+Also, it can be imported into another module
 """
 import argparse
 from os import path

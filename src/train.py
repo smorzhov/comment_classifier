@@ -35,9 +35,18 @@ def main():
     parser = init_argparse()
     args = parser.parse_args()
 
+    # TODO: load train validation data
     top_words = 5000
     embedding_vector_length = 32
-    model = get_model(args.model, top_words=top_words, embedding_vector_length=embedding_vector_length)
+    model = get_model(
+        args.model,
+        top_words=top_words,
+        embedding_vector_length=embedding_vector_length)
+    model.fit()
+    # TODO: store parameters into file to be able to reproduce training (do not forget to save random seed!)
+    print(model.summary())
+    # TODO: training
+
 
 if __name__ == '__main__':
     main()
