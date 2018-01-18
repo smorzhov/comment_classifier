@@ -25,11 +25,16 @@ Remember that Docker container has the Python version 3.5.3!
     ```bash
     nvidia-docker run -v $PWD/src:/comment_classifier -dt --name tcc sm_keras:gpu /bin/bash
     ```
-3. Create some files with useful information about training data
+3. Training
     ```bash
-    nvidia-docker exec tcc python3 info.py
+    nvidia-docker exec tcc python3 train.py [-h]
     ```
 
 ## Advices
 
 You can add some custom stop words. They must be placed in `~src/data/stopwords.txt` file (one word per line).
+
+You can create some files with useful information about training data
+```bash
+nvidia-docker exec tcc python3 info.py
+```
