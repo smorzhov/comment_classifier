@@ -35,17 +35,18 @@ def main():
     parser = init_argparse()
     args = parser.parse_args()
 
-    try:
-        (x_train, y_train), (x_test, y_test) = get_test_train_data(args.train)
-    except IOError as err:
-        print(err)
+    if not path.isfile(args.train):
+        print('Cannot open {} file'.format(args.train))
         return
+    print('Loading train and test data')
+    (x_train, y_train), (x_test, y_test) = get_test_train_data(args.train)
     top_words = 5000
     embedding_vector_length = 32
     model = get_model(
         args.model,
         top_words=top_words,
         embedding_vector_length=embedding_vector_length)
+    print('Training')
     print(model.summary())
     model.fit(x_train, y_train, epochs=10, batch_size=64)
     # Saving architecture + weights + optimizer state
