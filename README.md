@@ -19,11 +19,11 @@ Remember that Docker container has the Python version 3.5.3!
 1. Download and unrar [test](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/test.csv.zip) and [train](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/train.csv.zip) data into `~src/data` directory. 
 2. If you are planning to use nvidia-docker, you need to building nvidia-docker image first. Otherwise, you can skip this step
     ```bash
-    nvidia-docker build -t sm_keras:gpu .
+    nvidia-docker build -t sm_keras_tf:gpu .
     ```
     Run container
     ```bash
-    nvidia-docker run -v $PWD/src:/comment_classifier -dt --name tcc sm_keras:gpu /bin/bash
+    nvidia-docker run -v $PWD/src:/comment_classifier -dt --name tcc sm_keras_tf:gpu /bin/bash
     ```
 3. Training
     ```bash

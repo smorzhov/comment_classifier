@@ -1,22 +1,39 @@
-FROM gw000/keras:2.1.1-py3-tf-gpu
+FROM nvcr.io/nvidia/tensorflow:17.10
 
 COPY install.py install.py
 
 VOLUME ["/comment_classifier"]
 
 # Run the copied file and install some dependencies
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y \
-    python3-matplotlib && \
-    apt-get clean && \
+RUN apt update -qq && \
+    apt install --no-install-recommends -y \
+    # install essentials
+    build-essential \
+    g++ \
+    git \
+    graphviz \
+    openssh-client \
+    # requirements for numpy
+    libopenblas-base \
+    python-numpy \
+    python-scipy \
+    # requirements for keras
+    python-h5py \
+    python-yaml \
+    python-pydot \
+    # requirements for pydot
+    python-pydot \
+    python-pydot-ng && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/* && \
     chmod +x /comment_classifier && \
-    pip3 --no-cache-dir install --upgrade \
+    pip --no-cache-dir install --upgrade \
     gensim \
+    keras \
+    matplotlib \
     nltk \
-    numpy \
-    pandas \
-    scipy && \
-    python3 install.py && \
+    pandas && \
+    python install.py && \
     rm -f install.py
 
 WORKDIR /comment_classifier

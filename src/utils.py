@@ -10,6 +10,7 @@ except ImportError:
 from random import random
 from os import path, makedirs
 import pandas as pd
+import numpy as np
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
 """
@@ -74,7 +75,7 @@ def get_timestamp():
 
 def get_test_train_data(file,
                         num_words=None,
-                        try_load_pickled_tokenizer=True,
+                        try_load_pickled_tokenizer=False,
                         max_comment_length=500,
                         train_test_ratio=0.8):
     """Returns test train tuples"""
@@ -120,4 +121,5 @@ def get_test_train_data(file,
     # Truncate and pad input sequences
     x_train = sequence.pad_sequences(x_train, maxlen=max_comment_length)
     x_test = sequence.pad_sequences(x_test, maxlen=max_comment_length)
-    return (x_train, y_train), (x_test, y_test)
+    return (np.asarray(x_train), np.asarray(y_train)), (np.asarray(x_test),
+                                                        np.asarray(y_test))
