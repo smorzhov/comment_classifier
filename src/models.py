@@ -15,8 +15,7 @@ def get_model(model, **kwargs):
     Returns model compiled keras model ready for training
     """
     if model == 'lstm_cnn':
-        return lstm_cnn(kwargs['top_words'], kwargs['embedding_vector_length'],
-                        **kwargs)
+        return lstm_cnn(**kwargs)
     raise ValueError('Wrong model value!')
 
 
@@ -30,7 +29,7 @@ def lstm_cnn(top_words, embedding_vector_length, **kwargs):
     - **kwargs - keras specific Embedding() arguments
     """
     model = Sequential()
-    model.add(Embedding(top_words, embedding_vector_length, kwargs))
+    model.add(Embedding(top_words, embedding_vector_length, **kwargs))
     model.add(
         Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
     model.add(MaxPooling1D(pool_size=2))

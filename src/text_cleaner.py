@@ -46,7 +46,8 @@ def clean_comment(comment):
 def clean(data):
     """It cleans comments from test.csv"""
     for index, row in data.iterrows():
-        data.set_value(index, 'comment_text', clean_comment(row['comment_text']))
+        data.set_value(index, 'comment_text',
+                       clean_comment(row['comment_text']))
 
 
 def main():
