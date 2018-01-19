@@ -10,6 +10,7 @@ from threading import Thread
 from os import path
 import nltk
 import pandas as pd
+import numpy as np
 from utils import RAW_DATA_PATH, LOG_PATH, try_makedirs
 
 
@@ -83,9 +84,40 @@ def create_freq_dist(data, file_name):
             file.write('\n')
 
 
+def count_comment_statistics(data, file_name):
+    """
+    It finds the longest and shortes comments
+    and counts some other statistics about comment length
+    """
+
+    def plot_distribution():
+        """It saves comment length distribution plot into png file"""
+        import matplotlib
+        # generates images without having a window appear
+        matplotlib.use('Agg')
+        import matplotlib.pylab as plt
+
+        plt.hist(comments, bins=20)
+        plt.title("Comment length distribution")
+        plt.savefig(
+            path.join(LOG_PATH, '{}.png'.format(path.splitext(file_name)[0])))
+
+    comments = np.vectorize(len)(data.as_matrix(columns=['comment_text']))
+    with open(path.join(LOG_PATH, file_name), 'w') as file:
+        file.write('metrics,value\n')
+        file.write('min,{}\n'.format(comments.min()))
+        file.write('mean,{0:.2f}\n'.format(comments.mean()))
+        file.write('std,{0:.2f}\n'.format(comments.std()))
+        file.write('max,{}\n'.format(comments.max()))
+    plot_distribution()
+
+
 def main():
+    """Main function"""
     train_data = pd.read_csv(path.join(RAW_DATA_PATH, 'train.csv'))
     result = {}
+
+    count_comment_statistics(train_data, 'comments.csv')
 
     get_labels = Thread(target=freq_labels, args=(train_data, result))
     get_labels.start()
