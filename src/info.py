@@ -117,7 +117,9 @@ def main():
     train_data = pd.read_csv(path.join(RAW_DATA_PATH, 'train.csv'))
     result = {}
 
-    count_comment_statistics(train_data, 'comments.csv')
+    count_comments = Thread(
+        target=count_comment_statistics, args=(train_data, 'comments.csv'))
+    count_comments.start()
 
     get_labels = Thread(target=freq_labels, args=(train_data, result))
     get_labels.start()
@@ -125,6 +127,7 @@ def main():
     get_dict = Thread(target=freq_dist, args=(train_data, result, 100, 100))
     get_dict.start()
 
+    count_comments.join()
     get_labels.join()
     get_dict.join()
     print(result['freq_labels'].to_string(index=False))

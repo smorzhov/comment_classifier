@@ -65,9 +65,9 @@ def main():
         print('Cannot open {} file'.format(args.train))
         return
     print('Loading train and test data')
-    top_words = 5000
+    top_words = 10000
     (x_train, y_train), (x_test, y_test) = get_test_train_data(
-        args.train, top_words)
+        args.train, top_words, 1000)
     embedding_vector_length = 32
     model = get_model(
         args.model,
