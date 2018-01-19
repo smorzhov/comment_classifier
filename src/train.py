@@ -6,7 +6,7 @@ Usage: python3 train.py [-h]
 import argparse
 from os import path
 from utils import PROCESSED_DATA_PATH, MODELS_PATH
-from utils import get_timestamp, get_test_train_data
+from utils import get_timestamp, get_test_train_data, try_makedirs
 from models import get_model
 
 
@@ -31,7 +31,7 @@ def init_argparse():
     return parser
 
 
-def plot(history, prefix=None):
+def plot(history, model_path=None):
     """It saves into files accuracy and loss plots"""
     import matplotlib
     # generates images without having a window appear
@@ -45,7 +45,7 @@ def plot(history, prefix=None):
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.savefig(path.join(MODELS_PATH, '{}_accuracy.png'.format(prefix)))
+    plt.savefig(path.join(model_path, 'accuracy.png'))
     # summarize history for loss
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
@@ -53,7 +53,7 @@ def plot(history, prefix=None):
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.savefig(path.join(MODELS_PATH, '{}_loss.png'.format(prefix)))
+    plt.savefig(path.join(model_path, 'loss.png'))
 
 
 def main():
@@ -75,12 +75,15 @@ def main():
         embedding_vector_length=embedding_vector_length)
     print('Training')
     print(model.summary())
-    history = model.fit(x_train, y_train, validation_split=0.33, epochs=10, batch_size=64)
+    history = model.fit(
+        x_train, y_train, validation_split=0.25, epochs=3, batch_size=64)
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
-    prefix = '{}_{}'.format(args.model, get_timestamp())
-    model.save(path.join(MODELS_PATH, '{}_model.h5'.format(prefix)))
-    plot(history, prefix)
+    model_path = path.join(MODELS_PATH, '{}_{}'.format(args.model,
+                                                       get_timestamp()))
+    try_makedirs(model_path)
+    model.save(path.join(model_path, 'model.h5'))
+    plot(history, model_path)
     # Final evaluation of the model
     scores = model.evaluate(x_test, y_test, verbose=0)
     print("Accuracy: %.2f%%" % (scores[1] * 100))
