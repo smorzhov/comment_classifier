@@ -76,7 +76,7 @@ def main():
     print('Training')
     print(model.summary())
     history = model.fit(
-        x_train, y_train, validation_split=0.25, epochs=3, batch_size=64)
+        x_train, y_train, validation_split=0.25, epochs=2, batch_size=64)
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
     model_path = path.join(MODELS_PATH, '{}_{}'.format(args.model,
@@ -86,6 +86,7 @@ def main():
     plot(history, model_path)
     # Final evaluation of the model
     scores = model.evaluate(x_test, y_test, verbose=0)
+    print("Loss: %.2f%%" % (scores[0] * 100))
     print("Accuracy: %.2f%%" % (scores[1] * 100))
 
 
