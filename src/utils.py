@@ -15,11 +15,6 @@ from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
 
 """
-The app must work properly in cpu mode also!
-"""
-# TODO variant MODE = 'cpu'.
-MODE = 'gpu'
-"""
 Absolute utils.py file path. It is considered as the project root path.
 """
 CWD = path.dirname(path.realpath(__file__))
