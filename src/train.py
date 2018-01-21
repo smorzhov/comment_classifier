@@ -66,25 +66,24 @@ def main():
         return
     print('Loading train and test data')
     top_words = 5000
-    (x_train, y_train), (x_test, y_test) = get_test_train_data(
-        args.train, top_words)
+    (x_train, y_train), (x_test, y_test) = get_test_train_data(args.train, top_words)
     embedding_vector_length = 32
+    # loading the model
     model = get_model(
         args.model,
         top_words=top_words,
         embedding_vector_length=embedding_vector_length)
-    print('Training')
+    print('Training of model')
     print(model.summary())
-    history = model.fit(
-        x_train, y_train, validation_split=0.25, epochs=3, batch_size=64)
+    history = model.fit(x_train, y_train, validation_split=0.25, epochs=3, batch_size=64)
+    # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
-    model_path = path.join(MODELS_PATH, '{}_{}'.format(args.model,
-                                                       get_timestamp()))
+    model_path = path.join(MODELS_PATH, '{}_{}'.format(args.model, get_timestamp()))
     try_makedirs(model_path)
     model.save(path.join(model_path, 'model.h5'))
     plot(history, model_path)
-    # Final evaluation of the model
+    # Calculate accuracy for the model
     scores = model.evaluate(x_test, y_test, verbose=0)
     print("Accuracy: %.2f%%" % (scores[1] * 100))
 

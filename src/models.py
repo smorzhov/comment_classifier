@@ -30,11 +30,9 @@ def lstm_cnn(top_words, embedding_vector_length, **kwargs):
     """
     model = Sequential()
     model.add(Embedding(top_words, embedding_vector_length, **kwargs))
-    model.add(
-        Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
+    model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
     model.add(MaxPooling1D(pool_size=2))
     model.add(LSTM(100))
     model.add(Dense(6, activation='sigmoid'))
-    model.compile(
-        loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model

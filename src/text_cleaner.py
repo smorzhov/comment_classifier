@@ -46,19 +46,19 @@ def clean_comment(comment):
 def clean(data):
     """It cleans comments from test.csv"""
     for index, row in data.iterrows():
-        data.set_value(index, 'comment_text',
-                       clean_comment(row['comment_text']))
+        data.set_value(index, 'comment_text', clean_comment(row['comment_text']))
 
 
 def main():
     """Main function"""
+
+    # pull argparams
     parser = init_argparse()
     args = parser.parse_args()
 
     train = pd.read_csv(args.raw)
     clean(train)
-    train.to_csv(
-        path.join(args.processed, path.basename(args.raw)), index=False)
+    train.to_csv(path.join(args.processed, path.basename(args.raw)), index=False)
 
 
 if __name__ == '__main__':

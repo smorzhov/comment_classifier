@@ -13,10 +13,11 @@ import pandas as pd
 import numpy as np
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
+
 """
-The variant with MODE = 'cpu' must be considered.
 The app must work properly in cpu mode also!
 """
+# TODO variant MODE = 'cpu'.
 MODE = 'gpu'
 """
 Absolute utils.py file path. It is considered as the project root path.
@@ -44,7 +45,7 @@ PICKLES_PATH = path.join(CWD, 'pickles')
 
 
 def try_makedirs(name):
-    """Makes path if it doesn't exist"""
+    """Makes folder if it doesn't exist"""
     if not path.exists(name):
         makedirs(name)
 
@@ -103,6 +104,7 @@ def get_test_train_data(file,
             tokenizer = init_tokenizer()
     else:
         tokenizer = init_tokenizer()
+    # Pull train, test data and their labels
     x_train = []
     y_train = []
     x_test = []

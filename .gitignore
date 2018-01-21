@@ -69,3 +69,14 @@ src/data/raw
 src/log
 src/models
 src/pickles
+
+# Data
+*train.csv
+*test.csv
+*sample_submission.csv
+
+# PyCharm
+.idea
+
+# Interpreter configuration
+venv

@@ -10,7 +10,6 @@ from threading import Thread
 from os import path
 import nltk
 import pandas as pd
-import numpy as np
 from utils import RAW_DATA_PATH, LOG_PATH, try_makedirs
 
 
@@ -20,10 +19,13 @@ def freq_dist(train_data, result, top=50, low=50):
 
     # NLTK's default English stopwords
     default_stopwords = set(nltk.corpus.stopwords.words('english'))
+    # pull auxiliary stopwords from user file
     custom_stopwords = set(
         codecs.open(path.join(RAW_DATA_PATH, 'stopwords.txt'), 'r', 'utf-8')
         .read().splitlines())
+    # generate set of all using stopwords
     stopwords = default_stopwords | custom_stopwords
+
     words = nltk.word_tokenize(data)
 
     # Remove single-character tokens (mostly punctuation)
@@ -52,41 +54,40 @@ def freq_dist(train_data, result, top=50, low=50):
     # Calculate frequency distribution
     fdist = nltk.FreqDist(words)
 
+    # the most and the least popular words
     result['freq_dist'] = [fdist.most_common(top), fdist.most_common()[-low:]]
 
 
 def freq_labels(train_data, result):
-    """Returns data frame that contains label and its frequency"""
+    """Returns data frame that contains labels and their frequencies"""
     freq = {}
     for _, row in train_data[[
             'toxic', 'severe_toxic', 'obscene', 'threat', 'insult',
             'identity_hate'
     ]].iterrows():
+        # generate united label name from set of labels
         label = ''.join(str(c) for c in row)
+        # calculate values of label frequences
         if label in freq:
             freq[label] += 1
         else:
             freq[label] = 1
     series = pd.Series(freq, name='freq')
     series.index.name = 'label'
+    # labels and their frequencies
     result['freq_labels'] = series.reset_index().sort_values(
         by=['freq', 'label'], ascending=False)
 
 
 def create_freq_dist(data, file_name):
     """Creates word_freq file"""
-    with open(path.join(LOG_PATH, file_name), 'w') as file:
-        file.write('word,freq\n')
-        for word, freq in data:
-            file.write(str(word))
-            file.write(',')
-            file.write(str(freq))
-            file.write('\n')
+    pdmost = pd.DataFrame(data, columns=['word', 'freq'])
+    pdmost.to_csv(path.join(LOG_PATH, file_name), index=False)
 
 
 def count_comment_statistics(data, file_name):
     """
-    It finds the longest and shortes comments
+    It finds the longest and shortest comments
     and counts some other statistics about comment length
     """
 
@@ -97,18 +98,15 @@ def count_comment_statistics(data, file_name):
         matplotlib.use('Agg')
         import matplotlib.pylab as plt
 
-        plt.hist(comments, bins=20)
-        plt.title("Comment length distribution")
-        plt.savefig(
-            path.join(LOG_PATH, '{}.png'.format(path.splitext(file_name)[0])))
+        plt.hist(comments.as_matrix(), bins=20)
+        plt.title('Comment length distribution')
+        plt.xlabel('Number of comments')
+        plt.ylabel('Number of words')
+        plt.savefig(path.join(LOG_PATH, '{}.png'.format(path.splitext(file_name)[0])))
 
-    comments = np.vectorize(len)(data.as_matrix(columns=['comment_text']))
-    with open(path.join(LOG_PATH, file_name), 'w') as file:
-        file.write('metrics,value\n')
-        file.write('min,{}\n'.format(comments.min()))
-        file.write('mean,{0:.2f}\n'.format(comments.mean()))
-        file.write('std,{0:.2f}\n'.format(comments.std()))
-        file.write('max,{}\n'.format(comments.max()))
+    comments = data['comment_text'].str.len()
+    comments.describe().to_csv(path=path.join(LOG_PATH, file_name),
+                               index_label=['metrics', 'value'], float_format='%g')
     plot_distribution()
 
 
@@ -117,23 +115,27 @@ def main():
     train_data = pd.read_csv(path.join(RAW_DATA_PATH, 'train.csv'))
     result = {}
 
-    count_comment_statistics(train_data, 'comments.csv')
+    try_makedirs(LOG_PATH)
 
+    count_comment_statistics(train_data, 'comments_statistics.csv')
+
+    # pull class frequences of comments
     get_labels = Thread(target=freq_labels, args=(train_data, result))
     get_labels.start()
 
+    # pull frequences of words from comments
     get_dict = Thread(target=freq_dist, args=(train_data, result, 100, 100))
     get_dict.start()
 
     get_labels.join()
     get_dict.join()
+
+    # output info about frequences of labels and words from comments
     print(result['freq_labels'].to_string(index=False))
-    try_makedirs(LOG_PATH)
-    result['freq_labels'].to_csv(
-        path.join(LOG_PATH, 'freq_labels.csv'), index=False)
+    result['freq_labels'].to_csv(path.join(LOG_PATH, 'freq_labels.csv'), index=False)
     most, least = result['freq_dist']
-    print('\nMost:\n', most)
-    print('\nLeast:\n', least)
+    print('\nMost frequent words:\n', most)
+    print('\nLeast frequent words:\n', least)
     create_freq_dist(most, 'most_freq_dist.csv')
     create_freq_dist(least, 'least_freq_dist.csv')
 
