@@ -45,9 +45,12 @@ PICKLES_PATH = path.join(CWD, 'pickles')
 
 
 def try_makedirs(name):
-    """Makes folder if it doesn't exist"""
-    if not path.exists(name):
-        makedirs(name)
+    """Makes path if it doesn't exist"""
+    try:
+        if not path.exists(name):
+            makedirs(name)
+    except OSError:
+        return
 
 
 def get_logger(file):
@@ -76,8 +79,8 @@ def get_timestamp():
 
 def get_test_train_data(file,
                         num_words=None,
-                        try_load_pickled_tokenizer=False,
                         max_comment_length=500,
+                        try_load_pickled_tokenizer=False,
                         train_test_ratio=0.8):
     """Returns test train tuples"""
 

@@ -81,8 +81,8 @@ def freq_labels(train_data, result):
 
 def create_freq_dist(data, file_name):
     """Creates word_freq file"""
-    pdmost = pd.DataFrame(data, columns=['word', 'freq'])
-    pdmost.to_csv(path.join(LOG_PATH, file_name), index=False)
+    pddist = pd.DataFrame(data, columns=['word', 'freq'])
+    pddist.to_csv(path.join(LOG_PATH, file_name), index=False)
 
 
 def count_comment_statistics(data, file_name):
@@ -116,8 +116,9 @@ def main():
     result = {}
 
     try_makedirs(LOG_PATH)
-
-    count_comment_statistics(train_data, 'comments_statistics.csv')
+    count_comments = Thread(
+        target=count_comment_statistics, args=(train_data, 'comments_statistics.csv'))
+    count_comments.start()
 
     # pull class frequences of comments
     get_labels = Thread(target=freq_labels, args=(train_data, result))
@@ -127,12 +128,14 @@ def main():
     get_dict = Thread(target=freq_dist, args=(train_data, result, 100, 100))
     get_dict.start()
 
+    count_comments.join()
     get_labels.join()
     get_dict.join()
 
     # output info about frequences of labels and words from comments
     print(result['freq_labels'].to_string(index=False))
-    result['freq_labels'].to_csv(path.join(LOG_PATH, 'freq_labels.csv'), index=False)
+    result['freq_labels'].to_csv(
+        path.join(LOG_PATH, 'freq_labels.csv'), index=False)
     most, least = result['freq_dist']
     print('\nMost frequent words:\n', most)
     print('\nLeast frequent words:\n', least)

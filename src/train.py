@@ -65,7 +65,7 @@ def main():
         print('Cannot open {} file'.format(args.train))
         return
     print('Loading train and test data')
-    top_words = 5000
+    top_words = 10000
     (x_train, y_train), (x_test, y_test) = get_test_train_data(args.train, top_words)
     embedding_vector_length = 32
     # loading the model
@@ -83,8 +83,9 @@ def main():
     try_makedirs(model_path)
     model.save(path.join(model_path, 'model.h5'))
     plot(history, model_path)
-    # Calculate accuracy for the model
+    # Calculate metrics of the model
     scores = model.evaluate(x_test, y_test, verbose=0)
+    print("Loss: %.2f%%" % (scores[0] * 100))
     print("Accuracy: %.2f%%" % (scores[1] * 100))
 
 
