@@ -90,7 +90,7 @@ def main():
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
-    model_path = path.join(MODELS_PATH, '{}_{:.2f}_{:.2f}'.format(
+    model_path = path.join(MODELS_PATH, '{}_{:.4f}_{:.4f}'.format(
         args.model, history.history['val_loss'][-1]
         if 'val_loss' in history.history else history.history['loss'][-1],
         history.history['val_acc'][-1]

@@ -40,9 +40,12 @@ PICKLES_PATH = path.join(CWD, 'pickles')
 
 def try_makedirs(name):
     """Makes path if it doesn't exist"""
-    if not path.exists(name):
-        # Stragne, but it may raise winerror 123
-        makedirs(name, exist_ok=True)
+    try:
+        if not path.exists(name):
+            # Stragne, but it may raise winerror 123
+            makedirs(name)
+    except OSError:
+        return
 
 
 def get_logger(file):
