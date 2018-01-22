@@ -15,6 +15,8 @@ from utils import RAW_DATA_PATH, LOG_PATH, try_makedirs
 
 def freq_dist(train_data, result, top=50, low=50):
     """Returns the most and the least popular words in `data`"""
+    # TODO: ERROR! UnicodeDecodeError: 'ascii' codec can't decode
+    # byte 0xc2 in position 56: ordinal not in range(128)
     data = train_data['comment_text'].str.encode('utf-8').to_string()
 
     # NLTK's default English stopwords

@@ -14,7 +14,7 @@ You will need the following things properly installed on your computer.
 
 ## Running
 
-Remember that Docker container has the Python version 3.5.3!
+Remember that Docker container has the Python version 2.7.12!
 
 1. Download and unrar (unzip) [test](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/test.csv.zip) and [train](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/train.csv.zip) data into `~src/data` directory. 
 2. If you are planning to use nvidia-docker, you need to building nvidia-docker image first. Otherwise, you can skip this step
