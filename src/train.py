@@ -76,7 +76,7 @@ def main():
     top_words = 10000
     max_comment_length = 1000
     (x_train, y_train), (x_test, y_test) = data_to_sequence(
-        args.train, top_words, max_comment_length)
+        args.train, top_words, max_comment_length, train_test_ratio=1.0)
     embedding_vector_length = 32
     # loading the model
     model = get_model(
@@ -86,7 +86,7 @@ def main():
     print('Training of model')
     print(model.summary())
     history = model.fit(
-        x_train, y_train, validation_split=0.25, epochs=3, batch_size=64)
+        x_train, y_train, validation_split=0.3, epochs=3, batch_size=64)
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
@@ -99,9 +99,9 @@ def main():
     model.save(path.join(model_path, 'model.h5'))
     plot(history, model_path)
     # Calculate metrics of the model
-    scores = model.evaluate(x_test, y_test, verbose=0)
-    print("Loss: %.2f%%" % (scores[0] * 100))
-    print("Accuracy: %.2f%%" % (scores[1] * 100))
+    # scores = model.evaluate(x_test, y_test, verbose=0)
+    # print("Loss: %.2f%%" % (scores[0] * 100))
+    # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
     (test_data, _), _ = data_to_sequence(
         args.test,
@@ -121,6 +121,8 @@ def main():
         'insult': predictions[:, 4],
         'identity_hate': predictions[:, 5]
     })
+    # Rounding makes predictions much worse!
+    # pd_predictions = pd_predictions.round(2)
     pd_predictions.to_csv(path.join(model_path, 'predictions.csv'), index=False)
 
 
