@@ -72,29 +72,32 @@ def get_timestamp():
     return datetime.datetime.today().strftime('%Y-%m-%dT%H:%M:%S')
 
 
-def data_to_sequence(file,
-                     num_words=None,
-                     max_comment_length=500,
-                     try_load_pickled_tokenizer=False,
-                     load_lables=True,
-                     train_test_ratio=0.8):
-    """Returns (test, train) tuples"""
+def load_test_train_data(train_file,
+                         test_file,
+                         num_words=None,
+                         max_comment_length=500,
+                         try_load_pickled_tokenizer=False):
+    """Returns test typle and train list"""
 
     def init_tokenizer():
         """Initializes tokenizer"""
         tokenizer = Tokenizer(num_words)
-        tokenizer.fit_on_texts(data['comment_text'])
+        tokenizer.fit_on_texts(
+            pd.concat(
+                [train_data['comment_text'], test_data['comment_text']],
+                ignore_index=True))
         # Tokenizer takes a lot of time to build an index.
         # That is why it is good to store it as a pickle.
         try_makedirs(PICKLES_PATH)
         file_name = '{}_tokenizer.pickle'.format(
-            path.splitext(path.basename(file)[0]))
+            path.splitext(path.basename(train_file)[0]))
         with open(path.join(PICKLES_PATH, file_name), 'wb') as handle:
             pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
         return tokenizer
 
     # Returns shuffled sample of DataFrame
-    data = pd.read_csv(file, converters={'comment_text': str}).sample(frac=1)
+    train_data = pd.read_csv(train_file).sample(frac=1)
+    test_data = pd.read_csv(test_file)
     tokenizer = None
     if try_load_pickled_tokenizer:
         try:
@@ -108,29 +111,17 @@ def data_to_sequence(file,
     # Pull train, test data and their labels
     x_train = []
     y_train = []
-    x_test = []
-    y_test = []
-    if load_lables:
-        for seq, row in zip(
-                tokenizer.texts_to_sequences_generator(data['comment_text']),
-                data[[
-                    'toxic', 'severe_toxic', 'obscene', 'threat', 'insult',
-                    'identity_hate'
-                ]].iterrows()):
-            if random() < train_test_ratio:
-                x_train.append(seq)
-                y_train.append(row[1].values.tolist())
-            else:
-                x_test.append(seq)
-                y_test.append(row[1].values.tolist())
-    else:
-        for seq in tokenizer.texts_to_sequences_generator(data['comment_text']):
-            if random() < train_test_ratio:
-                x_train.append(seq)
-            else:
-                x_test.append(seq)
+    for seq, row in zip(
+            tokenizer.texts_to_sequences_generator(train_data['comment_text']),
+            train_data[[
+                'toxic', 'severe_toxic', 'obscene', 'threat', 'insult',
+                'identity_hate'
+            ]].iterrows()):
+        x_train.append(seq)
+        y_train.append(row[1].values.tolist())
     # Truncate and pad input sequences
     x_train = sequence.pad_sequences(x_train, maxlen=max_comment_length)
-    x_test = sequence.pad_sequences(x_test, maxlen=max_comment_length)
-    return (np.asarray(x_train), np.asarray(y_train)), (np.asarray(x_test),
-                                                        np.asarray(y_test))
+    x_test = sequence.pad_sequences(
+        tokenizer.texts_to_sequences(test_data['comment_text']),
+        maxlen=max_comment_length)
+    return (np.asarray(x_train), np.asarray(y_train)), np.asarray(x_test)

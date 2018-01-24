@@ -7,7 +7,7 @@ import argparse
 from os import path
 import pandas as pd
 from utils import PROCESSED_DATA_PATH, MODELS_PATH
-from utils import data_to_sequence, try_makedirs
+from utils import load_test_train_data, try_makedirs
 from models import get_model
 
 
@@ -75,8 +75,8 @@ def main():
     print('Loading train and test data')
     top_words = 10000
     max_comment_length = 1000
-    (x_train, y_train), (x_test, y_test) = data_to_sequence(
-        args.train, top_words, max_comment_length, train_test_ratio=1.0)
+    (x_train, y_train), x_test = load_test_train_data(
+        args.train, args.test, top_words, max_comment_length)
     embedding_vector_length = 32
     # loading the model
     model = get_model(
@@ -86,7 +86,7 @@ def main():
     print('Training of model')
     print(model.summary())
     history = model.fit(
-        x_train, y_train, validation_split=0.3, epochs=3, batch_size=64)
+        x_train, y_train, validation_split=0.2, epochs=3, batch_size=64)
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
@@ -103,15 +103,8 @@ def main():
     # print("Loss: %.2f%%" % (scores[0] * 100))
     # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
-    (test_data, _), _ = data_to_sequence(
-        args.test,
-        top_words,
-        max_comment_length,
-        try_load_pickled_tokenizer=False,
-        load_lables=False,
-        train_test_ratio=1.0)
     print('Generating predictions')
-    predictions = model.predict(test_data, batch_size=64)
+    predictions = model.predict(x_test, batch_size=64)
     pd_predictions = pd.DataFrame({
         'id': pd.read_csv(args.test)['id'],
         'toxic': predictions[:, 0],
