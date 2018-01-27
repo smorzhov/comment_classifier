@@ -36,6 +36,13 @@ def init_argparse():
         help='path to test.csv file',
         default=path.join(PROCESSED_DATA_PATH, 'test.csv'),
         type=str)
+    parser.add_argument(
+        '-g',
+        '--gpu',
+        nargs='?',
+        help='GPU device number',
+        default=1,
+        type=int)
     return parser
 
 
@@ -81,6 +88,7 @@ def main():
     # loading the model
     model = get_model(
         args.model,
+        gpu=args.gpu,
         top_words=top_words,
         embedding_vector_length=embedding_vector_length)
     print('Training of model')

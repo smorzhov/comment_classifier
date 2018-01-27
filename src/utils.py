@@ -7,7 +7,6 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-from random import random
 from os import path, makedirs
 import pandas as pd
 import numpy as np
