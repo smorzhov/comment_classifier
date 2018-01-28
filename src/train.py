@@ -4,7 +4,7 @@ It trains model
 Usage: python3 train.py [-h]
 """
 import argparse
-from os import path
+from os import path, environ
 import pandas as pd
 from utils import PROCESSED_DATA_PATH, MODELS_PATH
 from utils import load_test_train_data, try_makedirs
@@ -37,12 +37,11 @@ def init_argparse():
         default=path.join(PROCESSED_DATA_PATH, 'test.csv'),
         type=str)
     parser.add_argument(
-        '-g',
         '--gpu',
         nargs='?',
-        help='GPU device number',
+        help='GPU device number (\'1\' or \'1,2,3\')',
         default=1,
-        type=int)
+        type=str)
     return parser
 
 
@@ -76,6 +75,8 @@ def main():
     parser = init_argparse()
     args = parser.parse_args()
 
+    environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
     if not path.isfile(args.train):
         print('Cannot open {} file'.format(args.train))
         return
@@ -91,7 +92,7 @@ def main():
         gpu=args.gpu,
         top_words=top_words,
         embedding_vector_length=embedding_vector_length)
-    print('Training of model')
+    print('Training model')
     print(model.summary())
     history = model.fit(
         x_train, y_train, validation_split=0.2, epochs=3, batch_size=64)
@@ -103,6 +104,7 @@ def main():
         if 'val_loss' in history.history else history.history['loss'][-1],
         history.history['val_acc'][-1]
         if 'val_acc' in history.history else history.history['acc'][-1]))
+    print('Saving model')
     try_makedirs(model_path)
     model.save(path.join(model_path, 'model.h5'))
     plot(history, model_path)
