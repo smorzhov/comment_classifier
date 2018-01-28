@@ -9,6 +9,7 @@ from os import path
 import pandas as pd
 import re
 import copy
+from nltk.corpus import stopwords
 from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH
 
 
@@ -61,7 +62,7 @@ def clean_punctuation_spaces(comment):
         comment = re.sub(key, value, comment)
     return comment
 
-def clean_register(comment, set_capital_letter : bool, set_i_letter : bool):
+def clean_register(comment, set_capital_letter, set_i_letter ):
     """
     This function set lower case to all text
     
@@ -109,9 +110,34 @@ def clean_punctuation(comment):
     Returns string without punctuation
     """
     comment = clean_emoji(comment)
-    comment = clean_register(comment, True, True)
+    comment = clean_register(comment, True, False)
     comment = clean_spaces(comment)
     return comment
+
+def clean_numbers(comment):
+    """
+    This function delete all numbers from comment
+    
+    Args:
+    - comment - raw comment string
+
+    Returns modified comment
+    """
+    comment = re.sub(r'[ \n][\d+]+', '', comment)
+    return comment
+
+def clean_stop_words(comment):
+    """
+    This function delete all stop-words from comment
+    
+    Args:
+    - comment - raw comment string
+
+    Returns modified comment
+    """
+    stop = set(stopwords.words('english'))
+    new_comment = ' '.join([i for i in comment.lower().split() if i not in stop])
+    return new_comment
 
 def clean_comment(comment):
     """
@@ -123,13 +149,15 @@ def clean_comment(comment):
     Returns clean comment string in utf-8. Original `comment` is not transformed
     """
     new_clean_comment = clean_punctuation(comment)
+    new_clean_comment = clean_numbers(new_clean_comment)
+    new_clean_comment = clean_stop_words(new_clean_comment)
     return new_clean_comment
 
 
 def clean(data):
     """It cleans comments from test.csv"""
     for index, row in data.iterrows():
-        data.set_value(index, 'comment_text', clean_comment(row['comment_text']))
+        data.at[index, 'comment_text'] = clean_comment(row['comment_text'])
 
 
 def main():
