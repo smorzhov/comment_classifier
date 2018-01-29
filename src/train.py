@@ -19,7 +19,7 @@ def init_argparse():
         '-m',
         '--model',
         nargs='?',
-        help='model architecture',
+        help='model architecture (lstm_cnn, gru)',
         default='lstm_cnn',
         type=str)
     parser.add_argument(
@@ -39,7 +39,7 @@ def init_argparse():
     parser.add_argument(
         '--gpu',
         nargs='?',
-        help='GPU device number (\'1\' or \'1,2,3\')',
+        help='GPU device number (1 or 1,2,3)',
         default=1,
         type=str)
     return parser
@@ -91,11 +91,12 @@ def main():
         args.model,
         gpu=args.gpu,
         top_words=top_words,
+        max_comment_length=max_comment_length,
         embedding_vector_length=embedding_vector_length)
     print('Training model')
     print(model.summary())
     history = model.fit(
-        x_train, y_train, validation_split=0.2, epochs=3, batch_size=64)
+        x_train, y_train, validation_split=0.2, epochs=3, batch_size=256)
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state

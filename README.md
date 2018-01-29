@@ -27,7 +27,7 @@ Remember that Docker container has the Python version 2.7.12!
     ```
 3. Training
     ```bash
-    nvidia-docker exec tcc python3 train.py [-h]
+    nvidia-docker exec tcc python train.py [-h]
     ```
 
 ## Advices
@@ -36,5 +36,5 @@ You can add some custom stop words. They must be placed in `~src/data/stopwords.
 
 You can create some files with useful information about training data
 ```bash
-nvidia-docker exec tcc python3 info.py
+nvidia-docker exec tcc python info.py
 ```

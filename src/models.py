@@ -3,8 +3,8 @@ Model dispatcher
 """
 import keras.backend.tensorflow_backend as K
 from keras.models import Sequential
-from keras.layers import Dense, LSTM, Bidirectional, GlobalMaxPool1D, Dropout
-from keras.layers import CuDNNGRU
+from keras.layers import Dense, LSTM, Bidirectional, GlobalMaxPool1D, Dropout, \
+                         CuDNNGRU
 from keras.layers.convolutional import Conv1D, MaxPooling1D
 from keras.layers.embeddings import Embedding
 from keras.optimizers import RMSprop
@@ -16,13 +16,14 @@ def get_model(model, gpu=1, **kwargs):
     """
     with K.tf.device('/gpu:{}'.format(gpu)):
         if model == 'lstm_cnn':
-            return lstm_cnn(**kwargs)
+            return lstm_cnn(kwargs['top_words'],
+                            kwargs['embedding_vector_length'])
         if model == 'gru':
-            return gru(**kwargs)
+            return gru(kwargs['top_words'], kwargs['embedding_vector_length'])
         raise ValueError('Wrong model value!')
 
 
-def lstm_cnn(top_words, embedding_vector_length, **kwargs):
+def lstm_cnn(top_words, embedding_vector_length):
     """
     Returns compiled keras lstm_cnn model ready for training
 
@@ -31,10 +32,9 @@ def lstm_cnn(top_words, embedding_vector_length, **kwargs):
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
     - embedding_vector_length
-    - **kwargs - keras specific Embedding() arguments
     """
     model = Sequential()
-    model.add(Embedding(top_words, embedding_vector_length, **kwargs))
+    model.add(Embedding(top_words, embedding_vector_length))
     model.add(
         Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
     model.add(MaxPooling1D(pool_size=2))
@@ -50,7 +50,7 @@ def lstm_cnn(top_words, embedding_vector_length, **kwargs):
     return model
 
 
-def gru(top_words, embedding_vector_length, **kwargs):
+def gru(top_words, embedding_vector_length):
     """
     Returns compiled keras gru model ready for training
 
@@ -59,10 +59,9 @@ def gru(top_words, embedding_vector_length, **kwargs):
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
     - embedding_vector_length
-    - **kwargs - keras specific Embedding() arguments
     """
     model = Sequential()
-    model.add(Embedding(top_words, embedding_vector_length, **kwargs))
+    model.add(Embedding(top_words, embedding_vector_length))
     model.add(Bidirectional(CuDNNGRU(64, return_sequences=True)))
     model.add(Dropout(0.3))
     model.add(Bidirectional(CuDNNGRU(64, return_sequences=False)))
