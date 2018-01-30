@@ -10,6 +10,7 @@ import pandas as pd
 import re
 import copy
 from nltk.corpus import stopwords
+from autocorrect import spell
 from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH
 
 
@@ -100,6 +101,18 @@ def clean_emoji(comment):
     comment = pattern.sub( '', comment )
     return comment
 
+def clean_sites(comment):
+    """
+    This function delete all stop-words from comment
+    
+    Args:
+    - comment - raw comment string
+
+    Returns modified comment
+    """
+    comment = re.sub(r'https|http|www|\\|/|_', ' ', comment)
+    return comment
+
 def clean_punctuation(comment):
     """
     It cleans punctuation
@@ -109,6 +122,7 @@ def clean_punctuation(comment):
 
     Returns string without punctuation
     """
+    comment = clean_sites(comment)
     comment = clean_emoji(comment)
     comment = clean_register(comment, True, False)
     comment = clean_spaces(comment)
@@ -139,6 +153,32 @@ def clean_stop_words(comment):
     new_comment = ' '.join([i for i in comment.lower().split() if i not in stop])
     return new_comment
 
+
+def clean_separate_letter(comment):
+    """
+    This function delete separate letter 
+    Example: "w o r l d"
+    
+    Args:
+    - comment - raw comment string
+
+    Returns modified comment
+    """
+    comment = re.sub(r'[ \n][a-zA-Z]{1}[ \n]', '  ', comment)
+    return comment
+
+def correct_spelling(comment):
+    """
+    This function correct spelling
+    
+    Args:
+    - comment - raw comment string
+
+    Returns modified comment
+    """    
+    new_comment = ' '.join([spell(i) for i in comment.lower().split()])
+    return new_comment
+
 def clean_comment(comment):
     """
     It cleans comment
@@ -148,9 +188,11 @@ def clean_comment(comment):
 
     Returns clean comment string in utf-8. Original `comment` is not transformed
     """
-    new_clean_comment = clean_punctuation(comment)
+    new_clean_comment = clean_separate_letter(comment)
+    new_clean_comment = clean_punctuation(new_clean_comment)
     new_clean_comment = clean_numbers(new_clean_comment)
     new_clean_comment = clean_stop_words(new_clean_comment)
+    new_clean_comment = correct_spelling(new_clean_comment)
     return new_clean_comment
 
 
