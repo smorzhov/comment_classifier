@@ -32,6 +32,7 @@ RUN apt update -qq && \
     keras \
     matplotlib \
     nltk \
+    autocorrect \
     pandas && \
     python install.py && \
     rm -f install.py
