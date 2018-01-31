@@ -12,7 +12,7 @@ from keras.callbacks import Callback
 from sklearn.metrics import roc_auc_score
 
 
-class IntervalEvaluation(Callback):
+class IntervalEvaluation(Callback):  # pylint: disable=R0903
     """It computes ROC AUC metrics"""
 
     def __init__(self, validation_data=()):
@@ -25,7 +25,8 @@ class IntervalEvaluation(Callback):
         """It will count RIC AUC score at the end of each epoch"""
         y_pred = self.model.predict_proba(self.x_val, verbose=0)
         self.aucs.append(roc_auc_score(self.y_val, y_pred))
-        print('\repoch: {:d} - ROC AUC: {:.4f}'.format(epoch + 1, self.aucs[-1]))
+        print(
+            '\repoch: {:d} - ROC AUC: {:.4f}'.format(epoch + 1, self.aucs[-1]))
 
 
 def get_model(model, gpu=1, **kwargs):

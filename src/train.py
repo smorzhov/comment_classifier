@@ -75,8 +75,7 @@ def plot(history, aucs, model_path=None):
 
 def main():
     """Main function"""
-    parser = init_argparse()
-    args = parser.parse_args()
+    args = init_argparse().parse_args()
 
     environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
@@ -90,18 +89,16 @@ def main():
         args.train, args.test, top_words, max_comment_length)
     train_data, val_data, train_labels, val_labels = train_test_split(
         data, labels, test_size=0.20, random_state=42)
-    embedding_vector_length = 32
     # loading the model
     model = get_model(
         args.model,
         gpu=args.gpu,
         top_words=top_words,
         max_comment_length=max_comment_length,
-        embedding_vector_length=embedding_vector_length)
+        embedding_vector_length=32)
     print('Training model')
     print(model.summary())
-    ival = IntervalEvaluation(
-        validation_data=(val_data, val_labels))
+    ival = IntervalEvaluation(validation_data=(val_data, val_labels))
     history = model.fit(
         train_data,
         train_labels,
@@ -128,7 +125,7 @@ def main():
 
     print('Generating predictions')
     predictions = model.predict(test_data, batch_size=64)
-    pd_predictions = pd.DataFrame({
+    pd.DataFrame({
         'id': pd.read_csv(args.test)['id'],
         'toxic': predictions[:, 0],
         'severe_toxic': predictions[:, 1],
@@ -136,11 +133,10 @@ def main():
         'threat': predictions[:, 3],
         'insult': predictions[:, 4],
         'identity_hate': predictions[:, 5]
-    })
-    # Rounding makes predictions much worse!
-    # pd_predictions = pd_predictions.round(2)
-    pd_predictions.to_csv(
+    }).to_csv(
         path.join(model_path, 'predictions.csv'), index=False)
+    # Don't round predictions.
+    # Rounding makes predictions much worse!
 
 
 if __name__ == '__main__':
