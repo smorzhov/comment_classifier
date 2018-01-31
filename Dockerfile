@@ -32,7 +32,8 @@ RUN apt update -qq && \
     keras \
     matplotlib \
     nltk \
-    pandas && \
+    pandas \
+    scikit-learn && \
     python install.py && \
     rm -f install.py
 
