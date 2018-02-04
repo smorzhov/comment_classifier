@@ -6,9 +6,10 @@ Usage: python3 train.py [-h]
 import argparse
 from os import path, environ
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from utils import PROCESSED_DATA_PATH, MODELS_PATH
 from utils import load_test_train_data, try_makedirs
-from models import get_model
+from models import get_model, IntervalEvaluation
 
 
 def init_argparse():
@@ -45,7 +46,7 @@ def init_argparse():
     return parser
 
 
-def plot(history, model_path=None):
+def plot(history, aucs, model_path=None):
     """It saves into files accuracy and loss plots"""
     import matplotlib
     # generates images without having a window appear
@@ -61,19 +62,20 @@ def plot(history, model_path=None):
     plt.legend(['train', 'test'], loc='upper left')
     plt.savefig(path.join(model_path, 'accuracy.png'))
     # summarize history for loss
+    # TODO: some strange curves at the top of graphic
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
-    plt.title('model loss')
-    plt.ylabel('loss')
+    plt.plot(aucs)
+    plt.title('model loss, ROC AUC')
+    plt.ylabel('loss, ROC AUC')
     plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
+    plt.legend(['train', 'test', 'ROC AUC'], loc='upper left')
     plt.savefig(path.join(model_path, 'loss.png'))
 
 
 def main():
     """Main function"""
-    parser = init_argparse()
-    args = parser.parse_args()
+    args = init_argparse().parse_args()
 
     environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
@@ -83,40 +85,47 @@ def main():
     print('Loading train and test data')
     top_words = 10000
     max_comment_length = 1000
-    (x_train, y_train), x_test = load_test_train_data(
+    (data, labels), test_data = load_test_train_data(
         args.train, args.test, top_words, max_comment_length)
-    embedding_vector_length = 32
+    train_data, val_data, train_labels, val_labels = train_test_split(
+        data, labels, test_size=0.20, random_state=42)
     # loading the model
     model = get_model(
         args.model,
         gpu=args.gpu,
         top_words=top_words,
         max_comment_length=max_comment_length,
-        embedding_vector_length=embedding_vector_length)
+        embedding_vector_length=32)
     print('Training model')
     print(model.summary())
+    ival = IntervalEvaluation(validation_data=(val_data, val_labels))
     history = model.fit(
-        x_train, y_train, validation_split=0.2, epochs=3, batch_size=256)
+        train_data,
+        train_labels,
+        validation_data=(val_data, val_labels),
+        epochs=2,
+        batch_size=256,
+        callbacks=[ival])
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
-    model_path = path.join(MODELS_PATH, '{}_{:.4f}_{:.4f}'.format(
-        args.model, history.history['val_loss'][-1]
+    model_path = path.join(MODELS_PATH, '{}_{:.4f}_{:.4f}_{:.4f}'.format(
+        args.model, ival.aucs[-1], history.history['val_loss'][-1]
         if 'val_loss' in history.history else history.history['loss'][-1],
         history.history['val_acc'][-1]
         if 'val_acc' in history.history else history.history['acc'][-1]))
     print('Saving model')
     try_makedirs(model_path)
     model.save(path.join(model_path, 'model.h5'))
-    plot(history, model_path)
+    plot(history, ival.aucs, model_path)
     # Calculate metrics of the model
     # scores = model.evaluate(x_test, y_test, verbose=0)
     # print("Loss: %.2f%%" % (scores[0] * 100))
     # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
     print('Generating predictions')
-    predictions = model.predict(x_test, batch_size=64)
-    pd_predictions = pd.DataFrame({
+    predictions = model.predict(test_data, batch_size=64)
+    pd.DataFrame({
         'id': pd.read_csv(args.test)['id'],
         'toxic': predictions[:, 0],
         'severe_toxic': predictions[:, 1],
@@ -124,10 +133,10 @@ def main():
         'threat': predictions[:, 3],
         'insult': predictions[:, 4],
         'identity_hate': predictions[:, 5]
-    })
+    }).to_csv(
+        path.join(model_path, 'predictions.csv'), index=False)
+    # Don't round predictions.
     # Rounding makes predictions much worse!
-    # pd_predictions = pd_predictions.round(2)
-    pd_predictions.to_csv(path.join(model_path, 'predictions.csv'), index=False)
 
 
 if __name__ == '__main__':
