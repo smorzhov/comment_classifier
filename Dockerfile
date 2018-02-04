@@ -28,13 +28,13 @@ RUN apt update -qq && \
     rm -rf /var/lib/apt/lists/* && \
     chmod +x /comment_classifier && \
     pip --no-cache-dir install --upgrade \
+    autocorrect\
     gensim \
     keras \
     matplotlib \
     nltk \
     pandas \
-    scikit-learn \
-    autocorrect && \
+    scikit-learn && \
     python install.py && \
     rm -f install.py
 
