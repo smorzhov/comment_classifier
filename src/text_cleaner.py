@@ -12,6 +12,7 @@ import copy
 from nltk.corpus import stopwords
 from autocorrect import spell
 from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH
+from collections import deque
 
 
 def init_argparse():
@@ -179,6 +180,63 @@ def correct_spelling(comment):
     new_comment = ' '.join([spell(i) for i in comment.lower().split()])
     return new_comment
 
+def parse_string_from_temp(comment):
+    temp = re.split(r'\|', comment)
+    if len(temp) > 1 :
+        del temp[0]
+    
+    new_string = ""
+    for str in temp:
+        temp_str = re.split(r'\=', str)
+        if len(temp_str) > 1:
+            del temp_str[0]
+        for s in temp_str:
+            new_string += s
+            new_string += ' '
+        if new_string[len(new_string)-1] == ' ':
+            new_string = new_string[:-1]
+    return new_string
+
+
+def delete_wiki_templates(comment):
+    """
+    This function delete wiki_templates
+    
+    Args:
+    - comment - raw comment string
+
+    Returns modified comment
+    """
+    bracket_deque = deque()
+    bracket_poses = deque()
+    i = 0
+    new_comment = ""
+    while i < len(comment):
+        ch = comment[i]
+        if ch == '{' or ch == '[' :
+            bracket_deque.append( ch )
+            bracket_poses.append(i)
+        elif  ch == '}' :
+            if bracket_deque.pop() == '{' :
+                pos = bracket_poses.pop()
+                new_comment = comment[:pos]
+                new_comment += parse_string_from_temp(comment[pos+1:i])
+                new_comment += comment[i+1:]
+                i -= len(comment) - len(new_comment)
+                comment = new_comment
+        elif ch == ']' :
+            if bracket_deque.pop() == '[' :
+                pos = bracket_poses.pop()
+                new_comment = comment[:pos]
+                new_comment += parse_string_from_temp(comment[pos+1:i])
+                new_comment += comment[i+1:]
+                i -= len(comment) - len(new_comment) - 2
+                comment = new_comment
+        
+        i += 1
+    comment = re.sub(r'[{}\[\]]', '', comment)
+    return comment
+
 def clean_comment(comment):
     """
     It cleans comment
@@ -189,6 +247,7 @@ def clean_comment(comment):
     Returns clean comment string in utf-8. Original `comment` is not transformed
     """
     new_clean_comment = clean_separate_letter(comment)
+    new_clean_comment = delete_wiki_templates(comment)
     new_clean_comment = clean_punctuation(new_clean_comment)
     new_clean_comment = clean_numbers(new_clean_comment)
     new_clean_comment = clean_stop_words(new_clean_comment)
