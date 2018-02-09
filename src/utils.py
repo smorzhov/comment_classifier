@@ -95,8 +95,11 @@ def load_test_train_data(train_file,
         return tokenizer
 
     # Returns shuffled sample of DataFrame
-    train_data = pd.read_csv(train_file).sample(frac=1)
-    test_data = pd.read_csv(test_file)
+    train_data = pd.read_csv(
+        train_file, dtype={
+            'comment_text': str
+        }).sample(frac=1)
+    test_data = pd.read_csv(test_file, dtype={'comment_text': str})
     tokenizer = None
     if try_load_pickled_tokenizer:
         try:
