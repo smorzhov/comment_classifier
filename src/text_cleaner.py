@@ -276,9 +276,11 @@ def clean_comment(comment):
     Returns clean comment string in utf-8. Original `comment` is not transformed
     """
     new_clean_comment = clean_separate_letter(comment)
-    new_clean_comment = delete_wiki_templates(comment)
+    # TODO: strange line. Must be checked!
+    # new_clean_comment = delete_wiki_templates(comment)
+    new_clean_comment = delete_wiki_templates(new_clean_comment)
     new_clean_comment = clean_punctuation(new_clean_comment)
-    new_clean_comment = clean_numbers(new_clean_printcomment)
+    new_clean_comment = clean_numbers(new_clean_comment)
     new_clean_comment = clean_stop_words(new_clean_comment)
     new_clean_comment = correct_spelling(new_clean_comment)
     return new_clean_comment
