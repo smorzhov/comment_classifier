@@ -286,9 +286,9 @@ def clean_comment(comment):
     return new_clean_comment
 
 
-def clean(data):
+def clean(data, stage=None):
     """It cleans comments from test.csv"""
-    pbar = tqdm(total=data.size)
+    pbar = tqdm(total=data.size, desc=stage)
     for index, row in data.iterrows():
         data.at[index, 'comment_text'] = clean_comment(row['comment_text'])
         pbar.update(1)
@@ -302,15 +302,13 @@ def main():
     parser = init_argparse()
     args = parser.parse_args()
 
-    print('Cleaning {}'.format(args.train))
     train = pd.read_csv(args.train)
-    clean(train)
+    clean(train, stage='Cleaning {}'.format(args.train))
     train.to_csv(
         path.join(args.processed, path.basename(args.train)), index=False)
 
-    print('\nCleaning {}'.format(args.test))
     test = pd.read_csv(args.test)
-    clean(test)
+    clean(test, stage='Cleaning {}'.format(args.test))
     test.to_csv(
         path.join(args.processed, path.basename(args.train)), index=False)
 
