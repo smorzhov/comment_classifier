@@ -34,7 +34,8 @@ RUN apt update -qq && \
     matplotlib \
     nltk \
     pandas \
-    scikit-learn && \
+    scikit-learn \
+    tqdm && \
     python install.py && \
     rm -f install.py
 
