@@ -15,9 +15,7 @@ from utils import RAW_DATA_PATH, LOG_PATH, try_makedirs
 
 def freq_dist(train_data, result, top=50, low=50):
     """Returns the most and the least popular words in `data`"""
-    # TODO: ERROR! UnicodeDecodeError: 'ascii' codec can't decode
-    # byte 0xc2 in position 56: ordinal not in range(128)
-    data = train_data['comment_text'].str.encode('utf-8').to_string()
+    data = train_data['comment_text'].str.decode('utf-8').to_string()
 
     # NLTK's default English stopwords
     default_stopwords = set(nltk.corpus.stopwords.words('english'))
@@ -38,8 +36,7 @@ def freq_dist(train_data, result, top=50, low=50):
     words = [re.sub(r'\d+|\\n|\\x[0-9a-f]+', '', word) for word in words]
 
     # Remove punctuation
-    table = str.maketrans('', '', string.punctuation)
-    stripped = [word.translate(table) for word in words]
+    stripped = [word.translate(string.punctuation) for word in words]
     # Remove remaining tokens that are not alphabetic
     words = [word for word in stripped if word.isalpha()]
 
@@ -84,7 +81,8 @@ def freq_labels(train_data, result):
 def create_freq_dist(data, file_name):
     """Creates word_freq file"""
     pddist = pd.DataFrame(data, columns=['word', 'freq'])
-    pddist.to_csv(path.join(LOG_PATH, file_name), index=False)
+    pddist.to_csv(
+        path.join(LOG_PATH, file_name), index=False, encoding='utf-8')
 
 
 def count_comment_statistics(data, file_name):
@@ -104,11 +102,15 @@ def count_comment_statistics(data, file_name):
         plt.title('Comment length distribution')
         plt.xlabel('Number of comments')
         plt.ylabel('Number of words')
-        plt.savefig(path.join(LOG_PATH, '{}.png'.format(path.splitext(file_name)[0])))
+        plt.savefig(
+            path.join(LOG_PATH, '{}.png'.format(path.splitext(file_name)[0])))
 
     comments = data['comment_text'].str.len()
-    comments.describe().to_csv(path=path.join(LOG_PATH, file_name),
-                               index_label=['metrics', 'value'], float_format='%g')
+    comments.describe().to_csv(
+        path=path.join(LOG_PATH, file_name),
+        index_label=['metrics', 'value'],
+        float_format='%g',
+        encoding='utf-8')
     plot_distribution()
 
 
@@ -119,7 +121,8 @@ def main():
 
     try_makedirs(LOG_PATH)
     count_comments = Thread(
-        target=count_comment_statistics, args=(train_data, 'comments_statistics.csv'))
+        target=count_comment_statistics,
+        args=(train_data, 'comments_statistics.csv'))
     count_comments.start()
 
     # pull class frequences of comments
@@ -137,7 +140,7 @@ def main():
     # output info about frequences of labels and words from comments
     print(result['freq_labels'].to_string(index=False))
     result['freq_labels'].to_csv(
-        path.join(LOG_PATH, 'freq_labels.csv'), index=False)
+        path.join(LOG_PATH, 'freq_labels.csv'), index=False, encoding='utf-8')
     most, least = result['freq_dist']
     print('\nMost frequent words:\n', most)
     print('\nLeast frequent words:\n', least)

@@ -12,7 +12,7 @@ import copy
 from tqdm import tqdm
 from nltk.corpus import stopwords
 from autocorrect import spell
-from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH
+from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH, try_makedirs
 from collections import deque
 
 
@@ -282,7 +282,7 @@ def clean_comment(comment):
     new_clean_comment = clean_punctuation(new_clean_comment)
     new_clean_comment = clean_numbers(new_clean_comment)
     new_clean_comment = clean_stop_words(new_clean_comment)
-    new_clean_comment = correct_spelling(new_clean_comment)
+    # new_clean_comment = correct_spelling(new_clean_comment)
     return new_clean_comment
 
 
@@ -302,15 +302,21 @@ def main():
     parser = init_argparse()
     args = parser.parse_args()
 
+    try_makedirs(args.processed)
+
     train = pd.read_csv(args.train)
     clean(train, stage='Cleaning {}'.format(args.train))
     train.to_csv(
-        path.join(args.processed, path.basename(args.train)), index=False)
+        path.join(args.processed, path.basename(args.train)),
+        index=False,
+        encoding='utf-8')
 
     test = pd.read_csv(args.test)
     clean(test, stage='Cleaning {}'.format(args.test))
     test.to_csv(
-        path.join(args.processed, path.basename(args.train)), index=False)
+        path.join(args.processed, path.basename(args.train)),
+        index=False,
+        encoding='utf-8')
 
 
 if __name__ == '__main__':
