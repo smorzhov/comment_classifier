@@ -314,7 +314,7 @@ def main():
     test = pd.read_csv(args.test)
     clean(test, stage='Cleaning {}'.format(args.test))
     test.to_csv(
-        path.join(args.processed, path.basename(args.train)),
+        path.join(args.processed, path.basename(args.test)),
         index=False,
         encoding='utf-8')
 
