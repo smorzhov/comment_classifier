@@ -288,7 +288,7 @@ def clean_comment(comment):
 
 def clean(data, stage=None):
     """It cleans comments from test.csv"""
-    pbar = tqdm(total=data.size, desc=stage)
+    pbar = tqdm(total=data.shape[0], desc=stage)
     for index, row in data.iterrows():
         data.at[index, 'comment_text'] = clean_comment(row['comment_text'])
         pbar.update(1)
