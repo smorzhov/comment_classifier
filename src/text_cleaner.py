@@ -6,13 +6,11 @@ Also, it can be imported into another module
 """
 import argparse
 from os import path
-from functools import partial
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Process, Pool, cpu_count
 import pandas as pd
 import re
 import copy
 import numpy as np
-from tqdm import tqdm
 from nltk.corpus import stopwords
 from autocorrect import spell
 from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH, try_makedirs
@@ -296,7 +294,6 @@ def clean_comment(comment):
 
 
 def process(series):
-    # pbar.update(1)
     return u'\"{}\"'.format(clean_comment(series['comment_text']))
 
 
@@ -304,15 +301,14 @@ def call_process(df):
     return df.apply(process, axis=1)
 
 
-def clean(data, cpus, stage=None):
+def clean(raw_file, processed_file, cpus):
     """It cleans comments from test.csv"""
-    # pbar = tqdm(total=data.shape[0], desc=stage)
+    data = pd.read_csv(raw_file)
     pool = Pool(processes=cpus)
     data_split = np.array_split(data, cpus)
     pool_results = pool.map(call_process, data_split)
-    # pbar.close()
     data['comment_text'] = pd.concat(pool_results)
-    return data
+    data.to_csv(processed_file, index=False, encoding='utf-8')
 
 
 def main():
@@ -324,21 +320,22 @@ def main():
 
     try_makedirs(args.processed)
 
-    clean(
-        pd.read_csv(args.train),
-        args.cpus,
-        stage='Cleaning {}'.format(args.train)).to_csv(
+    train_proc = Process(
+        target=clean,
+        args=(
+            args.train,
             path.join(args.processed, path.basename(args.train)),
-            index=False,
-            encoding='utf-8')
-
-    clean(
-        pd.read_csv(args.test),
-        args.cpus,
-        stage='Cleaning {}'.format(args.test)).to_csv(
+            args.cpus,))
+    test_proc = Process(
+        target=clean,
+        args=(
+            args.test,
             path.join(args.processed, path.basename(args.test)),
-            index=False,
-            encoding='utf-8')
+            args.cpus,))
+    train_proc.start()
+    test_proc.start()
+    train_proc.join()
+    test_proc.join()
 
 
 if __name__ == '__main__':
