@@ -286,7 +286,7 @@ def clean_comment(comment):
     new_clean_comment = clean_punctuation(new_clean_comment)
     new_clean_comment = clean_numbers(new_clean_comment)
     new_clean_comment = clean_stop_words(new_clean_comment)
-    # new_clean_comment = correct_spelling(new_clean_comment)
+    new_clean_comment = correct_spelling(new_clean_comment)
     return new_clean_comment
 
 
