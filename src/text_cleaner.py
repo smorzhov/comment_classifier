@@ -311,7 +311,8 @@ def clean(data, cpus, stage=None):
     data_split = np.array_split(data, cpus)
     pool_results = pool.map(call_process, data_split)
     # pbar.close()
-    return pd.concat(pool_results)
+    data['comment_text'] = pd.concat(pool_results)
+    return data
 
 
 def main():
