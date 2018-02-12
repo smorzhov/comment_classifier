@@ -6,10 +6,26 @@ Usage: python3 train.py [-h]
 import argparse
 from os import path, environ
 import pandas as pd
+from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from utils import PROCESSED_DATA_PATH, MODELS_PATH
 from utils import load_test_train_data, try_makedirs
 from models import get_model, IntervalEvaluation
+
+TRAIN_PARAMS = {
+    'cnn': {
+        'epochs': 20,
+        'batch_size': 1024
+    },
+    'lstm_cnn': {
+        'epochs': 3,
+        'batch_size': 256
+    },
+    'gru': {
+        'epochs': 3,
+        'batch_size': 256
+    }
+}
 
 
 def init_argparse():
@@ -20,8 +36,8 @@ def init_argparse():
         '-m',
         '--model',
         nargs='?',
-        help='model architecture (lstm_cnn, gru)',
-        default='lstm_cnn',
+        help='model architecture (lstm_cnn, gru, cnn)',
+        default='gru',
         type=str)
     parser.add_argument(
         '-t',
@@ -85,7 +101,7 @@ def main():
     print('Loading train and test data')
     top_words = 10000
     max_comment_length = 1000
-    (data, labels), test_data = load_test_train_data(
+    (data, labels), test_data, word_index = load_test_train_data(
         args.train, args.test, top_words, max_comment_length)
     train_data, val_data, train_labels, val_labels = train_test_split(
         data, labels, test_size=0.20, random_state=42)
@@ -94,8 +110,9 @@ def main():
         args.model,
         gpu=args.gpu,
         top_words=top_words,
-        max_comment_length=max_comment_length,
-        embedding_vector_length=32)
+        word_index=word_index,
+        sequence_length=train_data.shape[1],
+        max_comment_length=max_comment_length)
     print('Training model')
     print(model.summary())
     ival = IntervalEvaluation(validation_data=(val_data, val_labels))
@@ -103,9 +120,9 @@ def main():
         train_data,
         train_labels,
         validation_data=(val_data, val_labels),
-        epochs=2,
-        batch_size=256,
-        callbacks=[ival])
+        epochs=TRAIN_PARAMS[args.model]['epochs'],
+        batch_size=TRAIN_PARAMS[args.model]['batch_size'],
+        callbacks=[ival, EarlyStopping(monitor='val_loss')])
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
@@ -124,7 +141,8 @@ def main():
     # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
     print('Generating predictions')
-    predictions = model.predict(test_data, batch_size=64)
+    predictions = model.predict(
+        test_data, batch_size=TRAIN_PARAMS[args.model]['batch_size'])
     pd.DataFrame({
         'id': pd.read_csv(args.test)['id'],
         'toxic': predictions[:, 0],

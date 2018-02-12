@@ -73,7 +73,6 @@ def clean_punctuation_spaces(comment):
     Doesn't return value
     It's change argument
     """
-    # TODO: Check warnings with backslashes in keys
     marks = {
         r'\.': r'. ',
         ',': r', ',

@@ -20,6 +20,8 @@ CWD = path.dirname(path.realpath(__file__))
 It must contain files with raw data
 """
 RAW_DATA_PATH = path.join(CWD, 'data', 'raw')
+WORD2VEC_MODEL_PATH = path.join(RAW_DATA_PATH,
+                                'GoogleNews-vectors-negative300.bin')
 """
 Processed test, train and other files used in training (testing) process must be saved here.
 By default, this directory is being ignored by GIT. It is not recommended
@@ -126,4 +128,5 @@ def load_test_train_data(train_file,
     x_test = sequence.pad_sequences(
         tokenizer.texts_to_sequences(test_data['comment_text']),
         maxlen=max_comment_length)
-    return (np.asarray(x_train), np.asarray(y_train)), np.asarray(x_test)
+    return (np.asarray(x_train),
+            np.asarray(y_train)), np.asarray(x_test), tokenizer.word_index
