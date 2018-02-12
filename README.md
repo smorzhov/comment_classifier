@@ -16,7 +16,8 @@ You will need the following things properly installed on your computer.
 
 Remember that Docker container has the Python version 2.7.12!
 
-1. Download and unrar (unzip) [test](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/test.csv.zip) and [train](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/train.csv.zip) data into `~src/data` directory. 
+1. Download and unrar (unzip) [test](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/test.csv.zip) and [train](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/train.csv.zip) data into `~src/data` directory.
+1. Download pretrained word2vec Gooogle model from [here](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit) and unpack it into `~src/data/raw` directory.
 2. If you are planning to use nvidia-docker, you need to building nvidia-docker image first. Otherwise, you can skip this step
     ```bash
     nvidia-docker build -t sm_keras_tf:gpu .

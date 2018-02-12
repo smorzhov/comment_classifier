@@ -85,7 +85,7 @@ def main():
     print('Loading train and test data')
     top_words = 10000
     max_comment_length = 1000
-    (data, labels), test_data = load_test_train_data(
+    (data, labels), test_data, word_index = load_test_train_data(
         args.train, args.test, top_words, max_comment_length)
     train_data, val_data, train_labels, val_labels = train_test_split(
         data, labels, test_size=0.20, random_state=42)
@@ -94,8 +94,9 @@ def main():
         args.model,
         gpu=args.gpu,
         top_words=top_words,
+        word_index=word_index,
         max_comment_length=max_comment_length,
-        embedding_vector_length=32)
+        embedding_vector_length=300)
     print('Training model')
     print(model.summary())
     ival = IntervalEvaluation(validation_data=(val_data, val_labels))
@@ -103,7 +104,7 @@ def main():
         train_data,
         train_labels,
         validation_data=(val_data, val_labels),
-        epochs=2,
+        epochs=3,
         batch_size=256,
         callbacks=[ival])
     # history of training
@@ -124,7 +125,7 @@ def main():
     # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
     print('Generating predictions')
-    predictions = model.predict(test_data, batch_size=64)
+    predictions = model.predict(test_data, batch_size=256)
     pd.DataFrame({
         'id': pd.read_csv(args.test)['id'],
         'toxic': predictions[:, 0],
