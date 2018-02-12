@@ -86,8 +86,8 @@ def cnn(top_words,
     """
     Returns compiled keras cnn model ready for training
 
-    Best with epochs=20 (with EarlyStopping),
-    batch_size=1024 (0.947 Kaggle ROC AUC).
+    Best with epochs=20 (with EarlyStopping), batch_size=1024
+    (ROC AUC: 0.947 - validation, ? - Kaggle).
     Training on single GPU < 20 minutes
 
     Params:
@@ -139,7 +139,8 @@ def lstm_cnn(top_words, word_index, use_pretrained=True):
     """
     Returns compiled keras lstm_cnn model ready for training
 
-    Best with epochs=3, batch_size=256 (? Kaggle ROC AUC).
+    Best with epochs=3, batch_size=256
+    (ROC AUC: 0.9785 - validation, ? - Kaggle).
     Training on single GPU - 1 hours
 
     Params:
@@ -169,7 +170,8 @@ def gru(top_words, word_index, use_pretrained=True):
     """
     Returns compiled keras gru model ready for training
 
-    Best with epochs=3, batch_size=256 (0.9713 Kaggle ROC AUC).
+    Best with epochs=3, batch_size=256
+    (ROC AUC: 0.9820 - validation, 0.9713 - Kaggle).
     Training on single GPU < 20 min.
 
     Params:
