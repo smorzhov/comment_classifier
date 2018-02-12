@@ -202,7 +202,6 @@ def get_pretrained_embedding(top_words, word_index):
     word_vectors = KeyedVectors.load_word2vec_format(
         WORD2VEC_MODEL_PATH, binary=True)
 
-    vocabulary_size = min(len(word_index) + 1, top_words)
     embedding_matrix = np.zeros((top_words, EMBEDDING_DIM))
     for word, i in word_index.items():
         if i >= top_words:
