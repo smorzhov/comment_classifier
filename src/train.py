@@ -12,6 +12,21 @@ from utils import PROCESSED_DATA_PATH, MODELS_PATH
 from utils import load_test_train_data, try_makedirs
 from models import get_model, IntervalEvaluation
 
+TRAIN_PARAMS = {
+    'cnn': {
+        'epochs': 20,
+        'batch_size': 1024
+    },
+    'lstm_cnn': {
+        'epochs': 3,
+        'batch_size': 256
+    },
+    'gru': {
+        'epochs': 3,
+        'batch_size': 256
+    }
+}
+
 
 def init_argparse():
     """Initializes argparse"""
@@ -105,8 +120,8 @@ def main():
         train_data,
         train_labels,
         validation_data=(val_data, val_labels),
-        epochs=3,
-        batch_size=256,
+        epochs=TRAIN_PARAMS[args.model]['epochs'],
+        batch_size=TRAIN_PARAMS[args.model]['batch_size'],
         callbacks=[ival, EarlyStopping(monitor='val_loss')])
     # history of training
     print(history.history.keys())
@@ -126,7 +141,8 @@ def main():
     # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
     print('Generating predictions')
-    predictions = model.predict(test_data, batch_size=256)
+    predictions = model.predict(
+        test_data, batch_size=TRAIN_PARAMS[args.model]['batch_size'])
     pd.DataFrame({
         'id': pd.read_csv(args.test)['id'],
         'toxic': predictions[:, 0],

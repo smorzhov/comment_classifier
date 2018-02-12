@@ -16,7 +16,8 @@ import numpy as np
 from gensim.models import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
 from utils import WORD2VEC_MODEL_PATH
-"""Dimension of word2vec"""
+
+# Dimension of word2vec
 EMBEDDING_DIM = 300
 
 
@@ -171,7 +172,7 @@ def gru(top_words, word_index, use_pretrained=True):
     Returns compiled keras gru model ready for training
 
     Best with epochs=3, batch_size=256
-    (ROC AUC: 0.9820 - validation, 0.9713 - Kaggle).
+    (ROC AUC: 0.987002 - validation, 0.9713 - Kaggle).
     Training on single GPU < 20 min.
 
     Params:
