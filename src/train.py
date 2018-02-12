@@ -6,6 +6,7 @@ Usage: python3 train.py [-h]
 import argparse
 from os import path, environ
 import pandas as pd
+from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from utils import PROCESSED_DATA_PATH, MODELS_PATH
 from utils import load_test_train_data, try_makedirs
@@ -20,8 +21,8 @@ def init_argparse():
         '-m',
         '--model',
         nargs='?',
-        help='model architecture (lstm_cnn, gru)',
-        default='lstm_cnn',
+        help='model architecture (lstm_cnn, gru, cnn)',
+        default='gru',
         type=str)
     parser.add_argument(
         '-t',
@@ -95,8 +96,8 @@ def main():
         gpu=args.gpu,
         top_words=top_words,
         word_index=word_index,
-        max_comment_length=max_comment_length,
-        embedding_vector_length=300)
+        sequence_length=train_data.shape[1],
+        max_comment_length=max_comment_length)
     print('Training model')
     print(model.summary())
     ival = IntervalEvaluation(validation_data=(val_data, val_labels))
@@ -106,7 +107,7 @@ def main():
         validation_data=(val_data, val_labels),
         epochs=3,
         batch_size=256,
-        callbacks=[ival])
+        callbacks=[ival, EarlyStopping(monitor='val_loss')])
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
