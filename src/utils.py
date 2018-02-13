@@ -24,6 +24,7 @@ WORD2VEC_MODEL_PATH = path.join(RAW_DATA_PATH,
                                 'GoogleNews-vectors-negative300.bin')
 GLOVE_6B_MODEL_PATH = path.join(RAW_DATA_PATH, 'glove.6B.300d.txt')
 GLOVE_840B_MODEL_PATH = path.join(RAW_DATA_PATH, 'glove.840B.300d.txt')
+FAST_TEXT_MODEL_PATH = path.join(RAW_DATA_PATH, 'wiki.en.vec')
 """
 Processed test, train and other files used in training (testing) process must be saved here.
 By default, this directory is being ignored by GIT. It is not recommended
