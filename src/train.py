@@ -15,15 +15,18 @@ from models import get_model, IntervalEvaluation
 TRAIN_PARAMS = {
     'cnn': {
         'epochs': 20,
-        'batch_size': 1024
+        'batch_size': 1024,
+        'pretrained': 'glove840B'  # 'word2vec', 'glove6B', 'glove840B'
     },
     'lstm_cnn': {
         'epochs': 3,
-        'batch_size': 256
+        'batch_size': 256,
+        'pretrained': 'glove840B'
     },
     'gru': {
         'epochs': 3,
-        'batch_size': 256
+        'batch_size': 256,
+        'pretrained': 'glove840B'
     }
 }
 
@@ -111,6 +114,7 @@ def main():
         gpu=args.gpu,
         top_words=top_words,
         word_index=word_index,
+        pretrained=TRAIN_PARAMS[args.model]['pretrained'],
         sequence_length=train_data.shape[1],
         max_comment_length=max_comment_length)
     print('Training model')
