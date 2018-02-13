@@ -9,8 +9,8 @@ except ImportError:
 import keras.backend.tensorflow_backend as K
 from keras import regularizers
 from keras.models import Sequential, Model
-from keras.layers import Dense, LSTM, Bidirectional, GlobalMaxPool1D, Dropout, \
-                         CuDNNGRU, Input, MaxPooling2D, concatenate
+from keras.layers import Dense, CuDNNLSTM, Bidirectional, GlobalMaxPool1D, \
+                         Dropout, CuDNNGRU, Input, MaxPooling2D, concatenate
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv1D, Conv2D, MaxPooling1D
 from keras.layers.embeddings import Embedding
@@ -159,11 +159,10 @@ def lstm_cnn(top_words, word_index, pretrained=None):
     model.add(
         Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
     model.add(MaxPooling1D(pool_size=2))
-    model.add(
-        Bidirectional(LSTM(100, return_sequences=True, recurrent_dropout=0.1)))
+    model.add(Bidirectional(CuDNNLSTM(EMBEDDING_DIM, return_sequences=True)))
     model.add(Dropout(0.3))
     model.add(GlobalMaxPool1D())
-    model.add(Dense(50, activation='relu'))
+    model.add(Dense(int(EMBEDDING_DIM / 2), activation='relu'))
     model.add(Dropout(0.1))
     model.add(Dense(6, activation='sigmoid'))
     model.compile(
@@ -185,10 +184,14 @@ def gru(top_words, word_index, pretrained=None):
     """
     model = Sequential()
     model.add(get_pretrained_embedding(top_words, word_index, pretrained))
-    model.add(Bidirectional(CuDNNGRU(64, return_sequences=True)))
+    model.add(
+        Bidirectional(
+            CuDNNGRU(EMBEDDING_DIM, return_sequences=True), merge_mode='sum'))
     model.add(Dropout(0.3))
-    model.add(Bidirectional(CuDNNGRU(64, return_sequences=False)))
-    model.add(Dense(32, activation='relu'))
+    model.add(
+        Bidirectional(
+            CuDNNGRU(EMBEDDING_DIM, return_sequences=False), merge_mode='sum'))
+    model.add(Dense(int(EMBEDDING_DIM / 2), activation='relu'))
     model.add(Dense(6, activation='sigmoid'))
     model.compile(
         loss='binary_crossentropy',

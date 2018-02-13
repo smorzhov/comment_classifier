@@ -3,7 +3,7 @@ It trains model
 
 Usage: python3 train.py [-h]
 """
-import argparse
+from argparse import ArgumentParser
 from os import path, environ
 import pandas as pd
 from keras.callbacks import EarlyStopping
@@ -33,7 +33,7 @@ TRAIN_PARAMS = {
 
 def init_argparse():
     """Initializes argparse"""
-    parser = argparse.ArgumentParser(
+    parser = ArgumentParser(
         description='Trains toxic comment classifier')
     parser.add_argument(
         '-m',
@@ -59,7 +59,7 @@ def init_argparse():
     parser.add_argument(
         '--gpu',
         nargs='?',
-        help='GPU device number (1 or 1,2,3)',
+        help='GPU device number',
         default=1,
         type=str)
     return parser
