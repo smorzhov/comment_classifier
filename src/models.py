@@ -227,8 +227,6 @@ def get_pretrained_embedding(top_words, word_index, pretrained):
             embedding_matrix[i] = np.random.normal(0, np.sqrt(0.25),
                                                    EMBEDDING_DIM)
 
-    return Embedding(
-        top_words, EMBEDDING_DIM, weights=[embedding_matrix], trainable=True)
     vocabulary_size = min(len(word_index) + 1, top_words)
     embedding_matrix = np.zeros((top_words, EMBEDDING_DIM))
     for word, i in word_index.items():
