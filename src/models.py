@@ -21,7 +21,7 @@ import numpy as np
 from gensim.models import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
 from utils import WORD2VEC_MODEL_PATH, GLOVE_6B_MODEL_PATH, \
-                  GLOVE_840B_MODEL_PATH, PICKLES_PATH, \
+                  GLOVE_840B_MODEL_PATH, FAST_TEXT_MODEL_PATH, PICKLES_PATH, \
                   try_makedirs
 
 # Dimension of word2vec
@@ -152,7 +152,7 @@ def lstm_cnn(top_words, word_index, pretrained=None):
 
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
-    - pretrained - None, 'word2vec', 'glove6B', 'glove840B'
+    - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     model = Sequential()
     model.add(get_pretrained_embedding(top_words, word_index, pretrained))
@@ -180,7 +180,7 @@ def gru(top_words, word_index, pretrained=None):
 
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
-    - pretrained - None, 'word2vec', 'glove6B', 'glove840B'
+    - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     model = Sequential()
     model.add(get_pretrained_embedding(top_words, word_index, pretrained))
@@ -205,32 +205,21 @@ def get_pretrained_embedding(top_words, word_index, pretrained):
     Returns Embedding layer with pretrained word2vec weights
 
     Params:
-    - pretrained - None, 'word2vec', 'glove6B', 'glove840B'
+    - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     word_vectors = {}
     if pretrained == 'word2vec':
         word_vectors = KeyedVectors.load_word2vec_format(
             WORD2VEC_MODEL_PATH, binary=True)
     elif pretrained == 'glove6B':
-        word_vectors = load_glove_model(GLOVE_6B_MODEL_PATH)
+        word_vectors = load_txt_model(GLOVE_6B_MODEL_PATH)
     elif pretrained == 'glove840B':
-        word_vectors = load_glove_model(GLOVE_840B_MODEL_PATH)
+        word_vectors = load_txt_model(GLOVE_840B_MODEL_PATH)
+    elif pretrained == 'fasttext':
+        word_vectors = load_txt_model(FAST_TEXT_MODEL_PATH)
     else:
-        return model.add(Embedding(top_words, EMBEDDING_DIM))
+        return Embedding(top_words, EMBEDDING_DIM)
 
-    vocabulary_size = min(len(word_index) + 1, top_words)
-    embedding_matrix = np.zeros((top_words, EMBEDDING_DIM))
-    for word, i in word_index.items():
-        if i >= top_words:
-            continue
-        try:
-            embedding_vector = word_vectors[word]
-            embedding_matrix[i] = embedding_vector
-        except KeyError:
-            embedding_matrix[i] = np.random.normal(0, np.sqrt(0.25),
-                                                   EMBEDDING_DIM)
-
-    vocabulary_size = min(len(word_index) + 1, top_words)
     embedding_matrix = np.zeros((top_words, EMBEDDING_DIM))
     for word, i in word_index.items():
         if i >= top_words:
@@ -246,8 +235,11 @@ def get_pretrained_embedding(top_words, word_index, pretrained):
         top_words, EMBEDDING_DIM, weights=[embedding_matrix], trainable=True)
 
 
-def load_glove_model(model_path):
-    """It returns glove pretrained model"""
+def load_txt_model(model_path):
+    """
+    It returns pretrained model saved in text format
+    where numbers are separated with spaces
+    """
     try_makedirs(PICKLES_PATH)
     pickled_model = path.join(PICKLES_PATH, '{}.pickle'.format(
         path.basename(model_path)))

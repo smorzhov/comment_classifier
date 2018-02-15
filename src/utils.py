@@ -24,6 +24,7 @@ WORD2VEC_MODEL_PATH = path.join(RAW_DATA_PATH,
                                 'GoogleNews-vectors-negative300.bin')
 GLOVE_6B_MODEL_PATH = path.join(RAW_DATA_PATH, 'glove.6B.300d.txt')
 GLOVE_840B_MODEL_PATH = path.join(RAW_DATA_PATH, 'glove.840B.300d.txt')
+FAST_TEXT_MODEL_PATH = path.join(RAW_DATA_PATH, 'wiki.en.vec')
 """
 Processed test, train and other files used in training (testing) process must be saved here.
 By default, this directory is being ignored by GIT. It is not recommended
@@ -82,6 +83,8 @@ def load_test_train_data(train_file,
                          try_load_pickled_tokenizer=False):
     """Returns test typle and train list"""
 
+    tokenizer_file = 'tokenizer.pickle'
+
     def init_tokenizer():
         """Initializes tokenizer"""
         tokenizer = Tokenizer(num_words)
@@ -92,23 +95,18 @@ def load_test_train_data(train_file,
         # Tokenizer takes a lot of time to build an index.
         # That is why it is good to store it as a pickle.
         try_makedirs(PICKLES_PATH)
-        file_name = '{}_tokenizer.pickle'.format(
-            path.splitext(path.basename(train_file)[0]))
-        with open(path.join(PICKLES_PATH, file_name), 'wb') as handle:
+        with open(path.join(PICKLES_PATH, tokenizer_file), 'wb') as handle:
             pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
         return tokenizer
 
     # Returns shuffled sample of DataFrame
     train_data = pd.read_csv(
-        train_file, dtype={
-            'comment_text': str
-        }).sample(frac=1)
+        train_file, dtype={'comment_text': str}).sample(frac=1)
     test_data = pd.read_csv(test_file, dtype={'comment_text': str})
     tokenizer = None
     if try_load_pickled_tokenizer:
         try:
-            with open(path.join(PICKLES_PATH, 'tokenizer.pickle'),
-                      'rb') as handle:
+            with open(path.join(PICKLES_PATH, tokenizer_file), 'rb') as handle:
                 tokenizer = pickle.load(handle)
         except:
             tokenizer = init_tokenizer()
