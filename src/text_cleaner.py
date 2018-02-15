@@ -1,7 +1,7 @@
 """
 It cleans comments
 
-Usage: python3 data_cleaner [-h]
+Usage: python text_cleaner.py [-h]
 Also, it can be imported into another module
 """
 import argparse
@@ -278,14 +278,15 @@ def clean_comment(comment):
     Args:
     - comment - raw comment string.raw
 
-    Returns clean comment string in utf-8. Original `comment` is not transformed
+    Returns clean comment string in utf-8.
+    Original `comment` is not transformed
     """
     new_clean_comment = clean_separate_letter(comment)
     new_clean_comment = delete_wiki_templates(new_clean_comment)
     new_clean_comment = clean_punctuation(new_clean_comment)
     new_clean_comment = clean_numbers(new_clean_comment)
     new_clean_comment = clean_stop_words(new_clean_comment)
-    new_clean_comment = correct_spelling(new_clean_comment)
+    # new_clean_comment = correct_spelling(new_clean_comment)
     return new_clean_comment
 
 
