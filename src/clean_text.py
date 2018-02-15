@@ -80,7 +80,7 @@ def remove_punctuation(comment):
     """
     It removes all punctuations except TODO
     """
-    return
+    return comment
 
 
 def remove_emojis(comment):
@@ -150,7 +150,7 @@ def clean_comment(comment):
     clean_comment = remove_urls(comment)
     clean_comment = remove_stop_words(clean_comment)
     clean_comment = remove_emojis(clean_comment)
-    # clean_comment = standardize_words(clean_comment)
+    clean_comment = standardize_words(clean_comment)
     # clean_comment = remove_punctuation(clean_comment)
     return clean_comment
 
