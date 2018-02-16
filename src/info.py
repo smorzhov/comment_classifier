@@ -3,6 +3,7 @@ Prints some information about training data
 
 Usage: python info.py
 """
+from argparse import ArgumentParser
 import codecs
 import string
 import re
@@ -10,7 +11,8 @@ from threading import Thread
 from os import path
 import nltk
 import pandas as pd
-from utils import RAW_DATA_PATH, LOG_PATH, try_makedirs
+from utils import RAW_DATA_PATH, LOG_PATH, RAW_DATA_PATH, \
+                  try_makedirs, load_train_data
 
 
 def freq_dist(train_data, result, top=50, low=50):
@@ -114,9 +116,28 @@ def count_comment_statistics(data, file_name):
     plot_distribution()
 
 
+def init_argparse():
+    """Initializes argparse"""
+    parser = ArgumentParser(description='Trains toxic comment classifier')
+    parser.add_argument(
+        '-t',
+        '--train',
+        nargs='?',
+        help='path to train.csv file',
+        default=path.join(RAW_DATA_PATH, 'train.csv'),
+        type=str)
+    parser.add_argument(
+        '--load_augmented',
+        help='Use augmente data for training',
+        action='store_true')
+    return parser
+
+
 def main():
     """Main function"""
-    train_data = pd.read_csv(path.join(RAW_DATA_PATH, 'train.csv'))
+    args = init_argparse().parse_args()
+
+    train_data = load_train_data(args.train, args.load_augmented)
     result = {}
 
     try_makedirs(LOG_PATH)

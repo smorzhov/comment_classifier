@@ -40,6 +40,19 @@ MODELS_PATH = path.join(CWD, 'models')
 Pickled objects must be stored here
 """
 PICKLES_PATH = path.join(CWD, 'pickles')
+STOP_WORDS_PATH = path.join(RAW_DATA_PATH, 'stopwords.txt')
+AUGMENTED_TRAIN_FILES = ['_de.csv', '_fr.csv', '_es.csv']
+
+
+def get_stop_words(stop_words=STOP_WORDS_PATH):
+    """
+    Params:
+    - stop_words - path to file with stop words.
+    Each line of the file must contains one word
+
+    Returns set with stop words
+    """
+    return set(open(stop_words).read().split())
 
 
 def try_makedirs(name):
@@ -76,42 +89,32 @@ def get_timestamp():
     return datetime.datetime.today().strftime('%Y-%m-%dT%H:%M:%S')
 
 
+def load_train_data(train_file, load_augmented_train_data=False):
+    """It loads train data"""
+    train_data = pd.read_csv(train_file, dtype={'comment_text': str})
+    if load_augmented_train_data:
+        corpus = [train_data]
+        prefix = path.splitext(train_file)[0]
+        for suffix in AUGMENTED_TRAIN_FILES:
+            corpus.append(
+                pd.read_csv(prefix + suffix, dtype={'comment_text': str}))
+        train_data = pd.concat(corpus, ignore_index=True)
+    return train_data
+
+
 def load_test_train_data(train_file,
                          test_file,
+                         load_augmented_train_data=False,
                          num_words=None,
-                         max_comment_length=500,
-                         try_load_pickled_tokenizer=False):
+                         max_comment_length=500):
     """Returns test typle and train list"""
-
-    tokenizer_file = 'tokenizer.pickle'
-
-    def init_tokenizer():
-        """Initializes tokenizer"""
-        tokenizer = Tokenizer(num_words)
-        tokenizer.fit_on_texts(
-            pd.concat(
-                [train_data['comment_text'], test_data['comment_text']],
-                ignore_index=True))
-        # Tokenizer takes a lot of time to build an index.
-        # That is why it is good to store it as a pickle.
-        try_makedirs(PICKLES_PATH)
-        with open(path.join(PICKLES_PATH, tokenizer_file), 'wb') as handle:
-            pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        return tokenizer
-
-    # Returns shuffled sample of DataFrame
-    train_data = pd.read_csv(
-        train_file, dtype={'comment_text': str}).sample(frac=1)
+    train_data = load_train_data(train_file, load_augmented_train_data)
     test_data = pd.read_csv(test_file, dtype={'comment_text': str})
-    tokenizer = None
-    if try_load_pickled_tokenizer:
-        try:
-            with open(path.join(PICKLES_PATH, tokenizer_file), 'rb') as handle:
-                tokenizer = pickle.load(handle)
-        except:
-            tokenizer = init_tokenizer()
-    else:
-        tokenizer = init_tokenizer()
+    tokenizer = Tokenizer(num_words)
+    tokenizer.fit_on_texts(
+        pd.concat(
+            [train_data['comment_text'], test_data['comment_text']],
+            ignore_index=True))
     # Pull train, test data and their labels
     x_train = []
     y_train = []

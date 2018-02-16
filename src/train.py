@@ -12,29 +12,50 @@ from utils import PROCESSED_DATA_PATH, MODELS_PATH
 from utils import load_test_train_data, try_makedirs
 from models import get_model, IntervalEvaluation
 
+# False - don't use augmented train data, True - use it
 TRAIN_PARAMS = {
     'cnn': {
-        'epochs': 20,
-        'batch_size': 1024,
-        'pretrained': 'glove840B'  # 'word2vec', 'glove6B', 'glove840B'
+        False: {
+            'epochs': 20,
+            'batch_size': 1024,
+            'pretrained': 'glove840B'  # 'word2vec', 'glove6B', 'glove840B'
+        },
+        True: {
+            'epochs': 20,
+            'batch_size': 1024,
+            'pretrained': 'glove840B'  # 'word2vec', 'glove6B', 'glove840B'
+        }
     },
     'lstm_cnn': {
-        'epochs': 3,
-        'batch_size': 256,
-        'pretrained': 'glove840B'
+        False: {
+            'epochs': 3,
+            'batch_size': 256,
+            'pretrained': 'glove840B'
+        },
+        True: {
+            'epochs': 3,
+            'batch_size': 256,
+            'pretrained': 'glove840B'
+        }
     },
     'gru': {
-        'epochs': 3,
-        'batch_size': 256,
-        'pretrained': 'glove840B'
+        False: {
+            'epochs': 3,
+            'batch_size': 256,
+            'pretrained': 'glove840B'
+        },
+        True: {
+            'epochs': 5,
+            'batch_size': 1000,
+            'pretrained': 'glove840B'
+        }
     }
 }
 
 
 def init_argparse():
     """Initializes argparse"""
-    parser = ArgumentParser(
-        description='Trains toxic comment classifier')
+    parser = ArgumentParser(description='Trains toxic comment classifier')
     parser.add_argument(
         '-m',
         '--model',
@@ -57,11 +78,11 @@ def init_argparse():
         default=path.join(PROCESSED_DATA_PATH, 'test.csv'),
         type=str)
     parser.add_argument(
-        '--gpu',
-        nargs='?',
-        help='GPU device number',
-        default=1,
-        type=str)
+        '--load_augmented',
+        help='Use augmente data for training',
+        action='store_true')
+    parser.add_argument(
+        '--gpu', nargs='?', help='GPU device number', default=1, type=str)
     return parser
 
 
@@ -105,7 +126,11 @@ def main():
     top_words = 10000
     max_comment_length = 1000
     (data, labels), test_data, word_index = load_test_train_data(
-        args.train, args.test, top_words, max_comment_length)
+        train_file=args.train,
+        test_file=args.test,
+        num_words=top_words,
+        load_augmented_train_data=args.load_augmented,
+        max_comment_length=max_comment_length)
     train_data, val_data, train_labels, val_labels = train_test_split(
         data, labels, test_size=0.20, random_state=42)
     # loading the model
@@ -114,7 +139,7 @@ def main():
         gpu=args.gpu,
         top_words=top_words,
         word_index=word_index,
-        pretrained=TRAIN_PARAMS[args.model]['pretrained'],
+        pretrained=TRAIN_PARAMS[args.model][args.load_augmented]['pretrained'],
         sequence_length=train_data.shape[1],
         max_comment_length=max_comment_length)
     print('Training model')
@@ -124,8 +149,8 @@ def main():
         train_data,
         train_labels,
         validation_data=(val_data, val_labels),
-        epochs=TRAIN_PARAMS[args.model]['epochs'],
-        batch_size=TRAIN_PARAMS[args.model]['batch_size'],
+        epochs=TRAIN_PARAMS[args.model][args.load_augmented]['epochs'],
+        batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'],
         callbacks=[ival, EarlyStopping(monitor='val_loss')])
     # history of training
     print(history.history.keys())
@@ -146,7 +171,8 @@ def main():
 
     print('Generating predictions')
     predictions = model.predict(
-        test_data, batch_size=TRAIN_PARAMS[args.model]['batch_size'])
+        test_data,
+        batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'])
     pd.DataFrame({
         'id': pd.read_csv(args.test)['id'],
         'toxic': predictions[:, 0],
