@@ -82,7 +82,11 @@ def init_argparse():
         help='Use augmente data for training',
         action='store_true')
     parser.add_argument(
-        '--gpu', nargs='?', help='GPU device number', default=1, type=str)
+        '--gpus',
+        nargs='?',
+        help="A list of GPU device numbers ('1', '1,2,5')",
+        default='0',
+        type=str)
     return parser
 
 
@@ -117,7 +121,7 @@ def main():
     """Main function"""
     args = init_argparse().parse_args()
 
-    environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    environ["CUDA_VISIBLE_DEVICES"] = args.gpus
 
     if not path.isfile(args.train):
         print('Cannot open {} file'.format(args.train))
@@ -134,9 +138,9 @@ def main():
     train_data, val_data, train_labels, val_labels = train_test_split(
         data, labels, test_size=0.20, random_state=42)
     # loading the model
-    model = get_model(
+    parallel_model, model = get_model(
         args.model,
-        gpu=args.gpu,
+        gpus=args.gpus,
         top_words=top_words,
         word_index=word_index,
         pretrained=TRAIN_PARAMS[args.model][args.load_augmented]['pretrained'],
@@ -145,7 +149,7 @@ def main():
     print('Training model')
     print(model.summary())
     ival = IntervalEvaluation(validation_data=(val_data, val_labels))
-    history = model.fit(
+    history = parallel_model.fit(
         train_data,
         train_labels,
         validation_data=(val_data, val_labels),

@@ -16,6 +16,7 @@ from keras.layers.convolutional import Conv1D, Conv2D, MaxPooling1D
 from keras.layers.embeddings import Embedding
 from keras.optimizers import RMSprop
 from keras.callbacks import Callback
+from keras.utils import multi_gpu_model
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from gensim.models import Word2Vec
@@ -47,46 +48,58 @@ class IntervalEvaluation(Callback):  # pylint: disable=R0903
             # for models that was created using functional API
             y_pred = self.model.predict(self.x_val, verbose=0)
         self.aucs.append(roc_auc_score(self.y_val, y_pred))
-        print('\repoch: {:d} - ROC AUC: {:.6f}'.format(epoch + 1,
-                                                       self.aucs[-1]))
+        print(
+            '\repoch: {:d} - ROC AUC: {:.6f}'.format(epoch + 1, self.aucs[-1]))
 
 
-def get_model(model, gpu=1, **kwargs):
+def get_gpus(gpus):
+    """Returns a list of integers"""
+    return list(map(int, gpus.split(',')))
+
+
+def get_model(model, gpus=1, **kwargs):
     """
-    Returns model compiled keras model ready for training
+    Returns compiled keras parallel model ready for training
+    and base model that must be used for saving weights
+
+    Params:
+    - model - model type
+    - gpus - a list with numbers of GPUs
     """
-    with K.tf.device('/gpu:{}'.format(gpu)):
-        rest = {}
-        if 'pretrained' in kwargs:
-            rest['pretrained'] = kwargs['pretrained']
-        if model == 'cnn':
-            if 'num_filters' in kwargs:
-                rest['num_filters'] = kwargs['num_filters']
-            if 'filter_sizes' in kwargs:
-                rest['filter_sizes'] = kwargs['filter_sizes']
-            if 'drop' in kwargs:
-                rest['drop'] = kwargs['drop']
-            return cnn(
-                top_words=kwargs['top_words'],
-                word_index=kwargs['word_index'],
-                sequence_length=kwargs['sequence_length'],
-                **rest)
-        if model == 'lstm_cnn':
-            return lstm_cnn(
-                top_words=kwargs['top_words'],
-                word_index=kwargs['word_index'],
-                **rest)
-        if model == 'gru':
-            return gru(
-                top_words=kwargs['top_words'],
-                word_index=kwargs['word_index'],
-                **rest)
-        raise ValueError('Wrong model value!')
+    rest = {'sequence_length': kwargs['sequence_length']}
+    if 'pretrained' in kwargs:
+        rest['pretrained'] = kwargs['pretrained']
+    if model == 'cnn':
+        if 'num_filters' in kwargs:
+            rest['num_filters'] = kwargs['num_filters']
+        if 'filter_sizes' in kwargs:
+            rest['filter_sizes'] = kwargs['filter_sizes']
+        if 'drop' in kwargs:
+            rest['drop'] = kwargs['drop']
+        return cnn(
+            gpus=gpus,
+            top_words=kwargs['top_words'],
+            word_index=kwargs['word_index'],
+            **rest)
+    if model == 'lstm_cnn':
+        return lstm_cnn(
+            gpus=gpus,
+            top_words=kwargs['top_words'],
+            word_index=kwargs['word_index'],
+            **rest)
+    if model == 'gru':
+        return gru(
+            gpus=gpus,
+            top_words=kwargs['top_words'],
+            word_index=kwargs['word_index'],
+            **rest)
+    raise ValueError('Wrong model value!')
 
 
 def cnn(top_words,
         sequence_length,
         word_index,
+        gpus,
         pretrained=None,
         num_filters=100,
         filter_sizes=[3, 4, 5],
@@ -101,7 +114,7 @@ def cnn(top_words,
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
     """
-    inputs = Input(shape=(sequence_length, ))
+    inputs = Input(shape=(sequence_length,))
     embedding = get_pretrained_embedding(top_words, word_index,
                                          pretrained)(inputs)
     reshape = Reshape((sequence_length, EMBEDDING_DIM, 1))(embedding)
@@ -128,21 +141,22 @@ def cnn(top_words,
 
     merged_tensor = concatenate([maxpool_0, maxpool_1, maxpool_2], axis=1)
     flatten = Flatten()(merged_tensor)
-    reshape = Reshape((3 * num_filters, ))(flatten)
+    reshape = Reshape((3 * num_filters,))(flatten)
     dropout = Dropout(drop)(flatten)
     output = Dense(
-        units=6,
-        activation='sigmoid',
+        units=6, activation='sigmoid',
         kernel_regularizer=regularizers.l2(0.01))(dropout)
 
-    # this creates a model that includes
-    model = Model(inputs, output)
-    model.compile(
+    with K.tf.device('/cpu:0'):
+        # this creates a model that includes
+        model = Model(inputs, output)
+    parallel_model = multi_gpu_model(model, gpus=get_gpus(gpus))
+    parallel_model.compile(
         loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    return model
+    return parallel_model, model
 
 
-def lstm_cnn(top_words, word_index, pretrained=None):
+def lstm_cnn(top_words, sequence_length, word_index, gpus, pretrained=None):
     """get_pretrained_embedding(top_words, word_index, pretrained)
     Returns compiled keras lstm_cnn model ready for training
 
@@ -154,23 +168,26 @@ def lstm_cnn(top_words, word_index, pretrained=None):
     - top_words - load the dataset but only keep the top n words, zero the rest
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
-    model = Sequential()
-    model.add(get_pretrained_embedding(top_words, word_index, pretrained))
-    model.add(
-        Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
-    model.add(MaxPooling1D(pool_size=2))
-    model.add(Bidirectional(CuDNNLSTM(EMBEDDING_DIM, return_sequences=True)))
-    model.add(Dropout(0.3))
-    model.add(GlobalMaxPool1D())
-    model.add(Dense(int(EMBEDDING_DIM / 2), activation='relu'))
-    model.add(Dropout(0.1))
-    model.add(Dense(6, activation='sigmoid'))
-    model.compile(
+    inputs = Input(shape=(sequence_length,))
+    x = get_pretrained_embedding(top_words, word_index, pretrained)(inputs)
+    x = Conv1D(filters=32, kernel_size=3, padding='same', activation='relu')(x)
+    x = MaxPooling1D(pool_size=2)(x)
+    x = Bidirectional(CuDNNLSTM(EMBEDDING_DIM, return_sequences=True))(x)
+    x = Dropout(0.3)(x)
+    x = GlobalMaxPool1D()(x)
+    x = Dense(int(EMBEDDING_DIM / 2), activation='relu')(x)
+    x = Dropout(0.1)(x)
+    output = Dense(6, activation='sigmoid')(x)
+    with K.tf.device('/cpu:0'):
+        # this creates a model that includes
+        model = Model(inputs, output)
+    parallel_model = multi_gpu_model(model, gpus=get_gpus(gpus))
+    parallel_model.compile(
         loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    return model
+    return parallel_model, model
 
 
-def gru(top_words, word_index, pretrained=None):
+def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     """
     Returns compiled keras gru model ready for training
 
@@ -182,22 +199,24 @@ def gru(top_words, word_index, pretrained=None):
     - top_words - load the dataset but only keep the top n words, zero the rest
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
-    model = Sequential()
-    model.add(get_pretrained_embedding(top_words, word_index, pretrained))
-    model.add(
-        Bidirectional(
-            CuDNNGRU(EMBEDDING_DIM, return_sequences=True), merge_mode='sum'))
-    model.add(Dropout(0.3))
-    model.add(
-        Bidirectional(
-            CuDNNGRU(EMBEDDING_DIM, return_sequences=False), merge_mode='sum'))
-    model.add(Dense(int(EMBEDDING_DIM / 2), activation='relu'))
-    model.add(Dense(6, activation='sigmoid'))
-    model.compile(
+    inputs = Input(shape=(sequence_length,))
+    x = get_pretrained_embedding(top_words, word_index, pretrained)(inputs)
+    x = Bidirectional(
+        CuDNNGRU(EMBEDDING_DIM, return_sequences=True), merge_mode='sum')(x)
+    x = Dropout(0.3)(x)
+    x = Bidirectional(
+        CuDNNGRU(EMBEDDING_DIM, return_sequences=False), merge_mode='sum')(x)
+    x = Dense(int(EMBEDDING_DIM / 2), activation='relu')(x)
+    output = Dense(6, activation='sigmoid')(x)
+    with K.tf.device('/cpu:0'):
+        # this creates a model that includes
+        model = Model(inputs, output)
+    parallel_model = multi_gpu_model(model, gpus=get_gpus(gpus))
+    parallel_model.compile(
         loss='binary_crossentropy',
         optimizer=RMSprop(clipvalue=1, clipnorm=1),
         metrics=['accuracy'])
-    return model
+    return parallel_model, model
 
 
 def get_pretrained_embedding(top_words, word_index, pretrained):
@@ -228,8 +247,8 @@ def get_pretrained_embedding(top_words, word_index, pretrained):
             embedding_vector = word_vectors[word]
             embedding_matrix[i] = embedding_vector
         except KeyError:
-            embedding_matrix[i] = np.random.normal(0, np.sqrt(0.25),
-                                                   EMBEDDING_DIM)
+            embedding_matrix[i] = np.random.normal(0,
+                                                   np.sqrt(0.25), EMBEDDING_DIM)
 
     return Embedding(
         top_words, EMBEDDING_DIM, weights=[embedding_matrix], trainable=True)
@@ -241,8 +260,8 @@ def load_txt_model(model_path):
     where numbers are separated with spaces
     """
     try_makedirs(PICKLES_PATH)
-    pickled_model = path.join(PICKLES_PATH, '{}.pickle'.format(
-        path.basename(model_path)))
+    pickled_model = path.join(PICKLES_PATH,
+                              '{}.pickle'.format(path.basename(model_path)))
     try:
         with open(pickled_model, 'rb') as model:
             return pickle.load(model)
