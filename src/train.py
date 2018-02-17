@@ -1,7 +1,7 @@
 """
 It trains model
 
-Usage: python3 train.py [-h]
+Usage: python train.py [-h]
 """
 from argparse import ArgumentParser
 from os import path, environ
@@ -42,10 +42,10 @@ TRAIN_PARAMS = {
         False: {
             'epochs': 3,
             'batch_size': 256,
-            'pretrained': 'glove840B'
+            'pretrained': 'fasttext'
         },
         True: {
-            'epochs': 5,
+            'epochs': 8,
             'batch_size': 1000,
             'pretrained': 'glove840B'
         }

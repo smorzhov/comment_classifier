@@ -17,7 +17,7 @@ You will need the following things properly installed on your computer.
 Remember that Docker container has the Python version 2.7.12!
 
 1. Download and unrar (unzip) [test](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/test.csv.zip) and [train](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/download/train.csv.zip) data into `~src/data` directory.
-1. Download pretrained [word2vec](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit) Gooogle model, [glove_6B](http://nlp.stanford.edu/data/wordvecs/glove.840B.300d.zip) model, [globe_840B](http://nlp.stanford.edu/data/wordvecs/glove.840B.300d.zip) and [FastText](https://s3-us-west-1.amazonaws.com/fasttext-vectors/wiki.en.vec) model. Unpack them into `~src/data/raw` directory.
+1. Download pretrained [word2vec](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit) Gooogle model, [glove_6B](http://nlp.stanford.edu/data/wordvecs/glove.840B.300d.zip) model, [globe_840B](http://nlp.stanford.edu/data/wordvecs/glove.840B.300d.zip) and [FastText](https://s3-us-west-1.amazonaws.com/fasttext-vectors/crawl-300d-2M.vec.zip) model. Unpack them into `~src/data/raw` directory.
 2. If you are planning to use nvidia-docker, you need to building nvidia-docker image first. Otherwise, you can skip this step
     ```bash
     nvidia-docker build -t sm_keras_tf:gpu .
