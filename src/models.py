@@ -147,10 +147,16 @@ def cnn(top_words,
         units=6, activation='sigmoid',
         kernel_regularizer=regularizers.l2(0.01))(dropout)
 
-    with K.tf.device('/cpu:0'):
-        # this creates a model that includes
-        model = Model(inputs, output)
-    parallel_model = multi_gpu_model(model, gpus=get_gpus(gpus))
+    gpus = get_gpus(gpus)
+    if len(gpus) == 1:
+        with K.tf.device('/gpu:{}'.format(gpus[0])):
+            model = Model(inputs, output)
+            parallel_model = model
+    else:    
+        with K.tf.device('/cpu:0'):
+            # this creates a model that includes
+            model = Model(inputs, output)
+        parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
         loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return parallel_model, model
@@ -178,10 +184,17 @@ def lstm_cnn(top_words, sequence_length, word_index, gpus, pretrained=None):
     x = Dense(int(EMBEDDING_DIM / 2), activation='relu')(x)
     x = Dropout(0.1)(x)
     output = Dense(6, activation='sigmoid')(x)
-    with K.tf.device('/cpu:0'):
-        # this creates a model that includes
-        model = Model(inputs, output)
-    parallel_model = multi_gpu_model(model, gpus=get_gpus(gpus))
+
+    gpus = get_gpus(gpus)
+    if len(gpus) == 1:
+        with K.tf.device('/gpu:{}'.format(gpus[0])):
+            model = Model(inputs, output)
+            parallel_model = model
+    else:
+        with K.tf.device('/cpu:0'):
+            # this creates a model that includes
+            model = Model(inputs, output)
+        parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
         loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return parallel_model, model
@@ -208,10 +221,17 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
         CuDNNGRU(EMBEDDING_DIM, return_sequences=False), merge_mode='sum')(x)
     x = Dense(int(EMBEDDING_DIM / 2), activation='relu')(x)
     output = Dense(6, activation='sigmoid')(x)
-    with K.tf.device('/cpu:0'):
-        # this creates a model that includes
-        model = Model(inputs, output)
-    parallel_model = multi_gpu_model(model, gpus=get_gpus(gpus))
+
+    gpus = get_gpus(gpus)
+    if len(gpus) == 1:
+        with K.tf.device('/gpu:{}'.format(gpus[0])):
+            model = Model(inputs, output)
+            parallel_model = model
+    else:
+        with K.tf.device('/cpu:0'):
+            # this creates a model that includes
+            model = Model(inputs, output)
+        parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
         loss='binary_crossentropy',
         optimizer=RMSprop(clipvalue=1, clipnorm=1),
