@@ -10,7 +10,8 @@ import keras.backend.tensorflow_backend as K
 from keras import regularizers
 from keras.models import Sequential, Model
 from keras.layers import Dense, CuDNNLSTM, Bidirectional, GlobalMaxPool1D, \
-                         Dropout, CuDNNGRU, Input, MaxPooling2D, concatenate
+                         Dropout, CuDNNGRU, Input, MaxPooling2D, BatchNormalization, \
+                         concatenate
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv1D, Conv2D, MaxPooling1D
 from keras.layers.embeddings import Embedding
@@ -216,9 +217,13 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     x = get_pretrained_embedding(top_words, word_index, pretrained)(inputs)
     x = Bidirectional(
         CuDNNGRU(EMBEDDING_DIM, return_sequences=True), merge_mode='sum')(x)
-    x = Dropout(0.3)(x)
+    # x = Dropout(0.3)(x)
+    x = BatchNormalization()(x)
+    # TODO: Try attention layer http://colinraffel.com/publications/iclr2016feed.pdf
+    # https://github.com/keras-team/keras/issues/4962
     x = Bidirectional(
         CuDNNGRU(EMBEDDING_DIM, return_sequences=False), merge_mode='sum')(x)
+    x = BatchNormalization()(x)
     x = Dense(int(EMBEDDING_DIM / 2), activation='relu')(x)
     output = Dense(6, activation='sigmoid')(x)
 

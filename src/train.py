@@ -42,11 +42,11 @@ TRAIN_PARAMS = {
         False: {
             'epochs': 3,
             'batch_size': 256,
-            'pretrained': 'fasttext'
+            'pretrained': 'glove840B'
         },
         True: {
-            'epochs': 8,
-            'batch_size': 1000,
+            'epochs': 5,
+            'batch_size': 5 * 256,
             'pretrained': 'glove840B'
         }
     }
@@ -155,7 +155,10 @@ def main():
         validation_data=(val_data, val_labels),
         epochs=TRAIN_PARAMS[args.model][args.load_augmented]['epochs'],
         batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'],
-        callbacks=[ival, EarlyStopping(monitor='val_loss')])
+        callbacks=[
+            ival,
+            EarlyStopping(monitor='val_loss', min_delta=0, patience=2)
+        ])
     # history of training
     print(history.history.keys())
     # Saving architecture + weights + optimizer state
