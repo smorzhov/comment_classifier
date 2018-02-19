@@ -157,7 +157,7 @@ def main():
         batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'],
         callbacks=[
             ival,
-            EarlyStopping(monitor='val_loss', min_delta=0, patience=2)
+            EarlyStopping(monitor='val_loss', min_delta=0, patience=3)
         ])
     # history of training
     print(history.history.keys())
