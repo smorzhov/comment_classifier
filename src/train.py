@@ -26,14 +26,14 @@ TRAIN_PARAMS = {
             'pretrained': 'glove840B'  # 'word2vec', 'glove6B', 'glove840B'
         }
     },
-    'lstm_cnn': {
+    'lstm': {
         False: {
-            'epochs': 3,
+            'epochs': 6,
             'batch_size': 256,
-            'pretrained': 'glove840B'
+            'pretrained': 'fasttext'
         },
         True: {
-            'epochs': 3,
+            'epochs': 10,
             'batch_size': 256,
             'pretrained': 'glove840B'
         }
@@ -42,7 +42,7 @@ TRAIN_PARAMS = {
         False: {
             'epochs': 3,
             'batch_size': 256,
-            'pretrained': 'glove840B'
+            'pretrained': 'fasttext'
         },
         True: {
             'epochs': 5,
@@ -60,7 +60,7 @@ def init_argparse():
         '-m',
         '--model',
         nargs='?',
-        help='model architecture (lstm_cnn, gru, cnn)',
+        help='model architecture (lstm, gru, cnn)',
         default='gru',
         type=str)
     parser.add_argument(
@@ -85,7 +85,7 @@ def init_argparse():
         '--gpus',
         nargs='?',
         help="A list of GPU device numbers ('1', '1,2,5')",
-        default='0',
+        default=0,
         type=str)
     return parser
 

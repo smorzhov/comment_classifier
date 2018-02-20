@@ -9,14 +9,14 @@ except ImportError:
 import keras.backend.tensorflow_backend as K
 from keras import regularizers
 from keras.models import Sequential, Model
-from keras.layers import Dense, CuDNNLSTM, Bidirectional, GlobalMaxPool1D, \
+from keras.layers import Dense, LSTM, Bidirectional, GlobalMaxPool1D, \
                          Dropout, CuDNNGRU, MaxPooling2D, BatchNormalization, \
-                         Input, Activation, RepeatVector, Permute, Lambda, \
-                         merge, concatenate
+                         Input, Activation, concatenate
+from keras.layers.merge import multiply
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv1D, Conv2D, MaxPooling1D
 from keras.layers.embeddings import Embedding
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, SGD
 from keras.callbacks import Callback
 from keras.utils import multi_gpu_model
 from sklearn.metrics import roc_auc_score
@@ -50,8 +50,8 @@ class IntervalEvaluation(Callback):  # pylint: disable=R0903
             # for models that was created using functional API
             y_pred = self.model.predict(self.x_val, verbose=0)
         self.aucs.append(roc_auc_score(self.y_val, y_pred))
-        print(
-            '\repoch: {:d} - ROC AUC: {:.6f}'.format(epoch + 1, self.aucs[-1]))
+        print('\repoch: {:d} - ROC AUC: {:.6f}'.format(epoch + 1,
+                                                       self.aucs[-1]))
 
 
 def get_gpus(gpus):
@@ -83,8 +83,8 @@ def get_model(model, gpus=1, **kwargs):
             top_words=kwargs['top_words'],
             word_index=kwargs['word_index'],
             **rest)
-    if model == 'lstm_cnn':
-        return lstm_cnn(
+    if model == 'lstm':
+        return lstm(
             gpus=gpus,
             top_words=kwargs['top_words'],
             word_index=kwargs['word_index'],
@@ -116,7 +116,7 @@ def cnn(top_words,
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
     """
-    inputs = Input(shape=(sequence_length,))
+    inputs = Input(shape=(sequence_length, ))
     embedding = get_pretrained_embedding(top_words, word_index,
                                          pretrained)(inputs)
     reshape = Reshape((sequence_length, EMBEDDING_DIM, 1))(embedding)
@@ -143,10 +143,11 @@ def cnn(top_words,
 
     merged_tensor = concatenate([maxpool_0, maxpool_1, maxpool_2], axis=1)
     flatten = Flatten()(merged_tensor)
-    reshape = Reshape((3 * num_filters,))(flatten)
+    reshape = Reshape((3 * num_filters, ))(flatten)
     dropout = Dropout(drop)(flatten)
     output = Dense(
-        units=6, activation='sigmoid',
+        units=6,
+        activation='sigmoid',
         kernel_regularizer=regularizers.l2(0.01))(dropout)
 
     gpus = get_gpus(gpus)
@@ -164,9 +165,9 @@ def cnn(top_words,
     return parallel_model, model
 
 
-def lstm_cnn(top_words, sequence_length, word_index, gpus, pretrained=None):
-    """get_pretrained_embedding(top_words, word_index, pretrained)
-    Returns compiled keras lstm_cnn model ready for training
+def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
+    """get_pretrained_embedding(top_words, sequence_length, word_index, pretrained)
+    Returns compiled keras lstm model ready for training
 
     Best with epochs=3, batch_size=256
     (ROC AUC: 0.9785 - validation, ? - Kaggle).
@@ -176,15 +177,18 @@ def lstm_cnn(top_words, sequence_length, word_index, gpus, pretrained=None):
     - top_words - load the dataset but only keep the top n words, zero the rest
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
-    inputs = Input(shape=(sequence_length,))
-    x = get_pretrained_embedding(top_words, word_index, pretrained)(inputs)
-    x = Conv1D(filters=32, kernel_size=3, padding='same', activation='relu')(x)
-    x = MaxPooling1D(pool_size=2)(x)
-    x = Bidirectional(CuDNNLSTM(EMBEDDING_DIM, return_sequences=True))(x)
-    x = Dropout(0.3)(x)
-    x = GlobalMaxPool1D()(x)
-    x = Dense(int(EMBEDDING_DIM / 2), activation='relu')(x)
-    x = Dropout(0.1)(x)
+    units = 100
+    inputs = Input(shape=(sequence_length, ), dtype='int32')
+    x = get_pretrained_embedding(top_words, sequence_length, word_index,
+                                 pretrained)(inputs)
+    x = Bidirectional(
+        LSTM(units, dropout=0.3, recurrent_dropout=0.1, return_sequences=True),
+        merge_mode='mul')(x)
+    x = Dropout(0.5)(x)
+    x = Bidirectional(
+        LSTM(
+            units, dropout=0.3, recurrent_dropout=0.1, return_sequences=False),
+        merge_mode='ave')(x)
     output = Dense(6, activation='sigmoid')(x)
 
     gpus = get_gpus(gpus)
@@ -214,29 +218,16 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     - top_words - load the dataset but only keep the top n words, zero the rest
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
-    inputs = Input(shape=(sequence_length,))
-    x = get_pretrained_embedding(top_words, word_index, pretrained)(inputs)
-    # x = Bidirectional(
-    #     CuDNNGRU(2 * EMBEDDING_DIM, return_sequences=True),
-    #     merge_mode='concat')(x)
-    # x = Dropout(0.5)(x)
-    # x = BatchNormalization()(x)
+    units = 2 * EMBEDDING_DIM
+    inputs = Input(shape=[sequence_length], dtype='int32')
+    x = get_pretrained_embedding(top_words, sequence_length, word_index,
+                                 pretrained)(inputs)
     x = Bidirectional(
-        CuDNNGRU(2 * EMBEDDING_DIM, return_sequences=False),
-        merge_mode='sum')(x)
-    # x = Dense(EMBEDDING_DIM, activation='relu')(x)
-    # attention block http://colinraffel.com/publications/iclr2016feed.pdf
-    # https://github.com/keras-team/keras/issues/4962
-    # compute importance for each step
-    a = Dense(1, activation='tanh')(x)
-    a = Flatten()(a)
-    a = Activation('softmax')(a)
-    a = RepeatVector(2 * EMBEDDING_DIM)(a)
-    a = Permute((2, 1))(a)
-    sent_representation = merge([x, a], mode='mul')
-    sent_representation = Lambda(
-        lambda xin: K.sum(xin, axis=-2),
-        output_shape=(2 * EMBEDDING_DIM,))(sent_representation)
+        CuDNNGRU(units, return_sequences=True), merge_mode='concat')(x)
+    x = Dropout(0.5)(x)
+    x = Bidirectional(
+        CuDNNGRU(units, return_sequences=False), merge_mode='sum')(x)
+    x = Dense(units, activation='relu')(x)
     output = Dense(6, activation='sigmoid')(x)
 
     gpus = get_gpus(gpus)
@@ -251,12 +242,14 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
         parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
         loss='binary_crossentropy',
-        optimizer=RMSprop(clipvalue=1, clipnorm=1),
+        # optimizer=RMSprop(clipvalue=1, clipnorm=1),
+        optimizer=SGD(),
         metrics=['accuracy'])
     return parallel_model, model
 
 
-def get_pretrained_embedding(top_words, word_index, pretrained):
+def get_pretrained_embedding(top_words, sequence_length, word_index,
+                             pretrained):
     """
     Returns Embedding layer with pretrained word2vec weights
 
@@ -274,7 +267,12 @@ def get_pretrained_embedding(top_words, word_index, pretrained):
     elif pretrained == 'fasttext':
         word_vectors = load_txt_model(FAST_TEXT_MODEL_PATH)
     else:
-        return Embedding(top_words, EMBEDDING_DIM)
+        return Embedding(
+            input_dim=top_words,
+            output_dim=EMBEDDING_DIM,
+            input_length=sequence_length,
+            trainable=False,
+            mask_zero=False)
 
     embedding_matrix = np.zeros((top_words, EMBEDDING_DIM))
     for word, i in word_index.items():
@@ -284,11 +282,16 @@ def get_pretrained_embedding(top_words, word_index, pretrained):
             embedding_vector = word_vectors[word]
             embedding_matrix[i] = embedding_vector
         except KeyError:
-            embedding_matrix[i] = np.random.normal(0,
-                                                   np.sqrt(0.25), EMBEDDING_DIM)
+            embedding_matrix[i] = np.random.normal(0, np.sqrt(0.25),
+                                                   EMBEDDING_DIM)
 
     return Embedding(
-        top_words, EMBEDDING_DIM, weights=[embedding_matrix], trainable=False)
+        input_dim=top_words,
+        output_dim=EMBEDDING_DIM,
+        input_length=sequence_length,
+        weights=[embedding_matrix],
+        trainable=False,
+        mask_zero=False)
 
 
 def load_txt_model(model_path):
@@ -297,8 +300,8 @@ def load_txt_model(model_path):
     where numbers are separated with spaces
     """
     try_makedirs(PICKLES_PATH)
-    pickled_model = path.join(PICKLES_PATH,
-                              '{}.pickle'.format(path.basename(model_path)))
+    pickled_model = path.join(PICKLES_PATH, '{}.pickle'.format(
+        path.basename(model_path)))
     try:
         with open(pickled_model, 'rb') as model:
             return pickle.load(model)
