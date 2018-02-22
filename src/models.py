@@ -11,10 +11,10 @@ from keras import regularizers
 from keras import initializers
 from keras import constraints
 from keras.models import Sequential, Model
-from keras.layers import Dense, CuDNNLSTM, Bidirectional, Dropout, \
+from keras.layers import Dense, CuDNNLSTM, Bidirectional, Dropout, PReLU, \
                          CuDNNGRU, MaxPooling2D, BatchNormalization, \
                          Input, Activation, SpatialDropout1D, RepeatVector, \
-                         concatenate
+                         MaxPooling1D, concatenate
 from keras.layers.merge import multiply
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv1D, Conv2D, MaxPooling1D
@@ -183,36 +183,26 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
     inputs = Input(shape=(sequence_length,), dtype='int32')
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
-    x = SpatialDropout1D(0.5)(x)
     # For mor detais about kernel_constraint - see chapter 5.1
     # in http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf
     x = Bidirectional(
         CuDNNLSTM(
             units,
-            kernel_constraint=constraints.min_max_norm(),
             recurrent_regularizer=regularizers.l2(),
             return_sequences=True),
         merge_mode='concat')(x)
+    x = Activation('tanh')(x)
     x = Dropout(0.5)(x)
     x = Bidirectional(
         CuDNNLSTM(
             units,
-            kernel_constraint=constraints.min_max_norm(),
             recurrent_regularizer=regularizers.l2(),
             return_sequences=False),
         merge_mode='concat')(x)
+    x = Activation('tanh')(x)
     x = Dropout(0.5)(x)
-    x = Dense(
-        units, kernel_constraint=constraints.min_max_norm(),
-        activation='relu')(x)
-    x = Dropout(0.5)(x)
-    x = Dense(
-        units, kernel_constraint=constraints.min_max_norm(),
-        activation='relu')(x)
-    x = Dropout(0.5)(x)
-    output = Dense(
-        6, kernel_constraint=constraints.min_max_norm(),
-        activation='sigmoid')(x)
+    x = Dense(6)(x)
+    output = PReLU()(x)
 
     gpus = get_gpus(gpus)
     if len(gpus) == 1:
@@ -244,7 +234,7 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     # units = 2 * EMBEDDING_DIM
-    units = 200
+    units = 300
     inputs = Input(shape=[sequence_length])
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
@@ -256,6 +246,7 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
             return_sequences=True),
         merge_mode='concat')(x)
     x = Dropout(0.5)(x)
+    x = PReLU()(x)
     x = Bidirectional(
         CuDNNGRU(
             units,
@@ -263,7 +254,7 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
             recurrent_regularizer=regularizers.l2(),
             return_sequences=False),
         merge_mode='sum')(x)
-    x = Dense(units, activation='relu')(x)
+    x = Dense(units)(x)
     outputs = Dense(6, activation='sigmoid')(x)
 
     gpus = get_gpus(gpus)
