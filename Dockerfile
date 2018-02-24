@@ -27,8 +27,10 @@ RUN apt update -qq && \
     apt clean && \
     rm -rf /var/lib/apt/lists/* && \
     chmod +x /comment_classifier && \
+    pip --no-cache-dir uninstall -y tensorflow && \
     pip --no-cache-dir install --upgrade \
-    autocorrect\
+    tensorflow-gpu \
+    autocorrect \
     gensim \
     keras \
     matplotlib \

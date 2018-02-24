@@ -2,8 +2,4 @@
 *.gitignore
 *.vscode
 
-*src/data
-*src/input
-*src/log
-*src/models
-*src/core
+*src/*

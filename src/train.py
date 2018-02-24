@@ -28,9 +28,9 @@ TRAIN_PARAMS = {
     },
     'lstm': {
         False: {
-            'epochs': 6,
+            'epochs': 10,
             'batch_size': 256,
-            'pretrained': 'fasttext'
+            'pretrained': 'glove840B'
         },
         True: {
             'epochs': 10,
