@@ -16,7 +16,9 @@ from utils import RAW_DATA_PATH, LOG_PATH, RAW_DATA_PATH, \
 
 
 def freq_dist(train_data, result, top=50, low=50):
-    """Returns the most and the least popular words in `data`"""
+    """
+    Returns the most and the least popular words in `data`
+    """
     data = train_data['comment_text'].str.decode('utf-8').to_string()
 
     # NLTK's default English stopwords
@@ -60,7 +62,9 @@ def freq_dist(train_data, result, top=50, low=50):
 
 
 def freq_labels(train_data, result):
-    """Returns data frame that contains labels and their frequencies"""
+    """
+    Form data frame that contains labels and their frequencies
+    """
     freq = {}
     for _, row in train_data[[
             'toxic', 'severe_toxic', 'obscene', 'threat', 'insult',
@@ -81,7 +85,9 @@ def freq_labels(train_data, result):
 
 
 def create_freq_dist(data, file_name):
-    """Creates word_freq file"""
+    """
+    Creates word_freq file
+    """
     pddist = pd.DataFrame(data, columns=['word', 'freq'])
     pddist.to_csv(
         path.join(LOG_PATH, file_name), index=False, encoding='utf-8')
@@ -89,12 +95,14 @@ def create_freq_dist(data, file_name):
 
 def count_comment_statistics(data, file_name):
     """
-    It finds the longest and shortest comments
+    Finds the longest and shortest comments
     and counts some other statistics about comment length
     """
 
     def plot_distribution():
-        """It saves comment length distribution plot into png file"""
+        """
+        Saves comment length distribution plot into png file
+        """
         import matplotlib
         # generates images without having a window appear
         matplotlib.use('Agg')
@@ -117,7 +125,11 @@ def count_comment_statistics(data, file_name):
 
 
 def init_argparse():
-    """Initializes argparse"""
+    """
+    Initializes argparse
+
+    Returns parser
+    """
     parser = ArgumentParser(description='Trains toxic comment classifier')
     parser.add_argument(
         '-t',
@@ -134,7 +146,9 @@ def init_argparse():
 
 
 def main():
-    """Main function"""
+    """
+    Main function
+    """
     args = init_argparse().parse_args()
 
     train_data = load_train_data(args.train, args.load_augmented)

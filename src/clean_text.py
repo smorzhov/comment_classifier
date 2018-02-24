@@ -1,6 +1,6 @@
 # coding=utf-8
 """
-It cleans comments
+Cleans comments
 
 Usage: python text_cleaner.py [-h]
 Also, it can be imported into another module
@@ -14,12 +14,10 @@ from multiprocessing import Process, Pool, cpu_count
 import pandas as pd
 import re
 import numpy as np
-from nltk.corpus import stopwords
 from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH, AUGMENTED_TRAIN_FILES, \
                   try_makedirs, get_stop_words
 
 HTML_PARSER = HTMLParser.HTMLParser()
-# STOP_WORDS = set(stopwords.words('english'))
 STOP_WORDS = get_stop_words()
 """
 the web url matching regex used by markdown
@@ -36,11 +34,15 @@ EMOJI_PATTERN = re.compile(
     "+",
     flags=re.UNICODE)
 MARKS = {r'[\s]+.': '. ', r',': ', ', r'?': '? ', r'!': '! '}
-PUNCTUATION = set(punctuation)
+PUNCTUATION = set(punctuation) # string of ASCII punctuation
 
 
 def init_argparse():
-    """Initializes argparse"""
+    """
+    Initializes argparse
+
+    Returns parser
+    """
     parser = argparse.ArgumentParser(
         description='Trains toxic comment classifier')
     parser.add_argument(
@@ -85,14 +87,16 @@ def remove_code_sequencies(comment, html=True, wiki_templates=False):
     if html:
         clean_comment = HTML_PARSER.unescape(comment)
     if wiki_templates:
-        # TODO
+        # TODO Clean wiki templates
         pass
     return clean_comment
 
 
 def remove_punctuation(comment):
     """
-    It removes all punctuations except !?,.'.
+    Removes all punctuations except !?,.'.
+
+    Returns clean comment
     """
     # removes other punctuation
     new_comment = re.sub(r"[^\w\s!?,.']", ' ', comment)
@@ -102,12 +106,13 @@ def remove_punctuation(comment):
     new_comment = re.sub(r"[\s]+(?=[!.,'])", '', new_comment)
     # add space after punctuation
     new_comment = re.sub(r"([!.,'])(?=[\w\d])", r'\1 ', new_comment)
-    return new_comment.strip()
+    clean_comment = new_comment.strip()
+    return clean_comment
 
 
 def remove_emojis(comment):
     """
-    It removes emojis from the comment
+    Removes emojis from the comment
 
     Returns clean comment
     """
@@ -125,7 +130,7 @@ def split_attached_words(comment):
 
 def remove_urls(comment):
     """
-    It removes URLs
+    Removes URLs
 
     Returns clean comment
     """
@@ -141,12 +146,24 @@ def standardize_words(comment):
     return ''.join(''.join(s)[:2] for _, s in groupby(comment))
 
 
+def remove_digits(comment):
+    """
+    Removes digits
+
+    Returns clean comment
+    """
+    new_comment = []
+    for word in comment.split():
+        # Filter out punctuation and stop words
+        if (not word.lstrip('-').replace('.', '', 1).isdigit()):
+            new_comment.append(word)
+    clean_comment = ' '.join(new_comment)
+    return clean_comment
+
+
 def remove_stop_words(comment):
     """
-    This function removes all stop-words and separate numbers from comment
-
-    Args:
-    - comment - raw comment string
+    Removes all stop-words and separate numbers from comment
 
     Returns clean comment
     """
@@ -161,13 +178,10 @@ def remove_stop_words(comment):
 
 def clean_comment(comment):
     """
-    It cleans comment
-
-    Args:
-    - comment - raw comment string.raw
+    Cleans comment
 
     Returns clean comment string in utf-8.
-    Original `comment` is not transformed
+    Original raw `comment` is not transformed
     """
     clean_comment = remove_code_sequencies(
         comment, html=True, wiki_templates=False)
@@ -175,8 +189,9 @@ def clean_comment(comment):
     clean_comment = remove_emojis(clean_comment)
     clean_comment = standardize_words(clean_comment)
     clean_comment = remove_punctuation(clean_comment)
+    clean_comment = remove_digits(clean_comment)
     clean_comment = remove_stop_words(clean_comment)
-    # let's remove punctuatiion once more
+    # remove punctuatiion once more
     clean_comment = remove_punctuation(clean_comment)
     return clean_comment
 
@@ -190,7 +205,9 @@ def call_process(df):
 
 
 def clean(raw_file, processed_file, cpus):
-    """It cleans comments from test.csv"""
+    """
+    Cleans comments from test.csv
+    """
     data = pd.read_csv(raw_file, encoding='utf-8')
     pool = Pool(processes=cpus)
     data_split = np.array_split(data, cpus)
@@ -200,7 +217,9 @@ def clean(raw_file, processed_file, cpus):
 
 
 def main():
-    """Main function"""
+    """
+    Main function
+    """
 
     # pull argparams
     parser = init_argparse()
@@ -233,6 +252,7 @@ def main():
                         raw_prefix + suffix,
                         processed_prefix + suffix,
                         args.cpus,)))
+
     test_process.start()
     for proc in train_processes:
         proc.start()

@@ -56,10 +56,12 @@ def get_stop_words(stop_words=STOP_WORDS_PATH):
 
 
 def try_makedirs(name):
-    """Makes path if it doesn't exist"""
+    """
+    Makes path if it doesn't exist
+    """
     try:
         if not path.exists(name):
-            # Stragne, but it may raise winerror 123
+            # Strange, but it may raise winerror 123
             makedirs(name)
     except OSError:
         return
@@ -85,12 +87,16 @@ def get_logger(file):
 
 
 def get_timestamp():
-    """Returns timestamp in YYYY-MM-DDTHH:MM:SS format"""
+    """
+    Returns timestamp in YYYY-MM-DDTHH:MM:SS format
+    """
     return datetime.datetime.today().strftime('%Y-%m-%dT%H:%M:%S')
 
 
 def load_train_data(train_file, load_augmented_train_data=False):
-    """It loads train data"""
+    """
+    Loads train data
+    """
     train_data = pd.read_csv(train_file, dtype={'comment_text': str})
     if load_augmented_train_data:
         corpus = [train_data]
@@ -98,6 +104,7 @@ def load_train_data(train_file, load_augmented_train_data=False):
         for suffix in AUGMENTED_TRAIN_FILES:
             corpus.append(
                 pd.read_csv(prefix + suffix, dtype={'comment_text': str}))
+        # merge augmented and raw train data
         train_data = pd.concat(corpus, ignore_index=True)
     return train_data
 
@@ -107,7 +114,9 @@ def load_test_train_data(train_file,
                          load_augmented_train_data=False,
                          num_words=None,
                          max_comment_length=500):
-    """Returns test typle and train list"""
+    """
+    Returns test typle and train list
+    """
     train_data = load_train_data(train_file, load_augmented_train_data)
     test_data = pd.read_csv(test_file, dtype={'comment_text': str})
     tokenizer = Tokenizer(num_words)

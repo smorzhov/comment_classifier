@@ -12,30 +12,26 @@ from keras import initializers
 from keras import constraints
 from keras.models import Sequential, Model
 from keras.layers import Dense, CuDNNLSTM, Bidirectional, Dropout, PReLU, \
-                         CuDNNGRU, MaxPooling2D, BatchNormalization, \
-                         Input, Activation, SpatialDropout1D, RepeatVector, \
-                         MaxPooling1D, concatenate
-from keras.layers.merge import multiply
+                         CuDNNGRU, MaxPooling2D, Input, Activation, \
+                         concatenate
 from keras.layers.core import Reshape, Flatten
-from keras.layers.convolutional import Conv1D, Conv2D, MaxPooling1D
+from keras.layers.convolutional import Conv2D
 from keras.layers.embeddings import Embedding
-from keras.optimizers import RMSprop, SGD
+from keras.optimizers import RMSprop
 from keras.callbacks import Callback
 from keras.utils import multi_gpu_model
 from sklearn.metrics import roc_auc_score
 import numpy as np
-from gensim.models import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
 from utils import WORD2VEC_MODEL_PATH, GLOVE_6B_MODEL_PATH, \
                   GLOVE_840B_MODEL_PATH, FAST_TEXT_MODEL_PATH, PICKLES_PATH, \
                   try_makedirs
 
-# Dimension of word2vec
 EMBEDDING_DIM = 300
 
 
 class IntervalEvaluation(Callback):  # pylint: disable=R0903
-    """It computes ROC AUC metrics"""
+    """Computes ROC AUC metrics"""
 
     def __init__(self, validation_data=()):
         super(Callback, self).__init__()  # pylint: disable=E1003
@@ -44,7 +40,9 @@ class IntervalEvaluation(Callback):  # pylint: disable=R0903
         self.aucs = []
 
     def on_epoch_end(self, epoch, logs={}):
-        """It will count RIC AUC score at the end of each epoch"""
+        """
+        Count ROC AUC score at the end of each epoch
+        """
         y_pred = None
         if hasattr(self.model, 'predict_proba'):
             # for Sequentional models
@@ -58,7 +56,9 @@ class IntervalEvaluation(Callback):  # pylint: disable=R0903
 
 
 def get_gpus(gpus):
-    """Returns a list of integers"""
+    """
+    Returns a list of integers (numbers of gpus)
+    """
     return list(map(int, gpus.split(',')))
 
 
@@ -147,7 +147,7 @@ def cnn(top_words,
     merged_tensor = concatenate([maxpool_0, maxpool_1, maxpool_2], axis=1)
     flatten = Flatten()(merged_tensor)
     reshape = Reshape((3 * num_filters,))(flatten)
-    dropout = Dropout(drop)(flatten)
+    dropout = Dropout(drop)(reshape)
     output = Dense(
         units=6, activation='sigmoid',
         kernel_regularizer=regularizers.l2(0.01))(dropout)
@@ -159,7 +159,7 @@ def cnn(top_words,
             parallel_model = model
     else:
         with K.tf.device('/cpu:0'):
-            # this creates a model that includes
+            # creates a model that includes
             model = Model(inputs, output)
         parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
@@ -211,7 +211,7 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
             parallel_model = model
     else:
         with K.tf.device('/cpu:0'):
-            # this creates a model that includes
+            # creates a model that includes
             model = Model(inputs, output)
         parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
@@ -264,7 +264,7 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
             parallel_model = model
     else:
         with K.tf.device('/cpu:0'):
-            # this creates a model that includes
+            # creates a model that includes
             model = Model(inputs, outputs)
         parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
@@ -322,21 +322,25 @@ def get_pretrained_embedding(top_words, sequence_length, word_index,
 
 def load_txt_model(model_path):
     """
-    It returns pretrained model saved in text format
+    Returns pretrained serialized model saved in text format
     where numbers are separated with spaces
     """
     try_makedirs(PICKLES_PATH)
     pickled_model = path.join(PICKLES_PATH,
                               '{}.pickle'.format(path.basename(model_path)))
     try:
+        # load ready text model
         with open(pickled_model, 'rb') as model:
             return pickle.load(model)
     except:
+        # form text model
         with open(model_path, 'r') as file:
             model = {}
             for line in file:
                 splitLine = line.split()
+                # pull word
                 word = splitLine[0]
+                # pull features
                 embedding = np.array([float(val) for val in splitLine[1:]])
                 model[word] = embedding
             with open(pickled_model, 'wb') as handle:

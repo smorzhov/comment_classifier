@@ -1,5 +1,5 @@
 """
-It trains model
+Trains model
 
 Usage: python train.py [-h]
 """
@@ -54,7 +54,11 @@ TRAIN_PARAMS = {
 
 
 def init_argparse():
-    """Initializes argparse"""
+    """
+    Initializes argparse
+
+    Returns parser
+    """
     parser = ArgumentParser(description='Trains toxic comment classifier')
     parser.add_argument(
         '-m',
@@ -91,7 +95,9 @@ def init_argparse():
 
 
 def plot(history, aucs, model_path=None):
-    """It saves into files accuracy and loss plots"""
+    """
+    Saves into files accuracy and loss plots
+    """
     import matplotlib
     # generates images without having a window appear
     matplotlib.use('Agg')
@@ -118,7 +124,9 @@ def plot(history, aucs, model_path=None):
 
 
 def main():
-    """Main function"""
+    """
+    Main function
+    """
     args = init_argparse().parse_args()
 
     environ["CUDA_VISIBLE_DEVICES"] = args.gpus
@@ -129,6 +137,7 @@ def main():
     print('Loading train and test data')
     top_words = 20000
     max_comment_length = 1000
+    # pull data for train and test
     (data, labels), test_data, word_index = load_test_train_data(
         train_file=args.train,
         test_file=args.test,
@@ -147,8 +156,10 @@ def main():
         sequence_length=train_data.shape[1],
         max_comment_length=max_comment_length)
     print('Training model')
+    # output summary of network's structure
     print(model.summary())
     ival = IntervalEvaluation(validation_data=(val_data, val_labels))
+    # train model
     history = parallel_model.fit(
         train_data,
         train_labels,
@@ -177,6 +188,7 @@ def main():
     # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
     print('Generating predictions')
+    # test model
     predictions = model.predict(
         test_data,
         batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'])

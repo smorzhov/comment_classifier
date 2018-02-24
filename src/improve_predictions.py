@@ -1,5 +1,5 @@
 """
-It tryies to improve predictions, but now it makes predictions much worse
+Tries to improve predictions, but now it makes predictions much worse
 
 Usage: python improve_predictions.py [-h]
 """
@@ -11,7 +11,11 @@ THRESHOLD = 0.01
 
 
 def init_argparse():
-    """Initializes argparse"""
+    """
+    Initializes argparse
+
+    Returns parser
+    """
     parser = ArgumentParser(description='Trains toxic comment classifier')
     parser.add_argument(
         '-p',
@@ -23,7 +27,11 @@ def init_argparse():
 
 
 def transform(x):
-    """Transforms value x"""
+    """
+    Transforms value x according to threshold
+
+    Returns transformed x
+    """
     if x < THRESHOLD:
         return 0.0
     elif x > 1 - THRESHOLD:
@@ -33,7 +41,9 @@ def transform(x):
 
 
 def main():
-    """Main function"""
+    """
+    Main function
+    """
     args = init_argparse().parse_args()
     result_file = path.splitext(args.predictions)[0] + '_trans.csv'
     columns = [
