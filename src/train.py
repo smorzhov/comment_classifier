@@ -153,8 +153,7 @@ def main():
         top_words=top_words,
         word_index=word_index,
         pretrained=TRAIN_PARAMS[args.model][args.load_augmented]['pretrained'],
-        sequence_length=train_data.shape[1],
-        max_comment_length=max_comment_length)
+        sequence_length=train_data.shape[1])
     print('Training model')
     # output summary of network's structure
     print(model.summary())

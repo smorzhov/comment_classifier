@@ -33,8 +33,10 @@ EMOJI_PATTERN = re.compile(
     u"(\ud83c[\udde0-\uddff])"  # flags (iOS)
     "+",
     flags=re.UNICODE)
+ALL_PUNCT_PATTERN = re.compile(
+    '[%s]' % re.escape(punctuation.replace('\'', '')))
 MARKS = {r'[\s]+.': '. ', r',': ', ', r'?': '? ', r'!': '! '}
-PUNCTUATION = set(punctuation) # string of ASCII punctuation
+PUNCTUATION = set(punctuation)  # string of ASCII punctuation
 
 
 def init_argparse():
@@ -169,9 +171,9 @@ def remove_stop_words(comment):
     """
     new_comment = []
     for word in comment.split():
-        # It filters out digits, punctuation and stop words
-        if (not word.replace('.', '', 1).isdigit() and
-                word not in PUNCTUATION and word.lower() not in STOP_WORDS):
+        # It filters out punctuation and stop words
+        if (word not in PUNCTUATION and
+                ALL_PUNCT_PATTERN.sub('', word.lower()) not in STOP_WORDS):
             new_comment.append(word)
     return ' '.join(new_comment)
 
@@ -188,6 +190,7 @@ def clean_comment(comment):
     clean_comment = remove_urls(comment)
     clean_comment = remove_emojis(clean_comment)
     clean_comment = standardize_words(clean_comment)
+    clean_comment = remove_stop_words(clean_comment)
     clean_comment = remove_punctuation(clean_comment)
     clean_comment = remove_digits(clean_comment)
     clean_comment = remove_stop_words(clean_comment)
