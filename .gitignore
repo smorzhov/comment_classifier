@@ -64,6 +64,7 @@ node_modules
 
 # Project specific
 src/data/processed
+src/data/hand_processed
 src/data/raw
 !src/data/raw/stopwords.txt
 src/log
