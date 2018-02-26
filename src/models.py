@@ -13,7 +13,8 @@ from keras import constraints
 from keras.models import Sequential, Model
 from keras.layers import Dense, CuDNNLSTM, Bidirectional, Dropout, PReLU, \
                          CuDNNGRU, MaxPooling2D, Input, Activation, \
-                         concatenate
+                         SpatialDropout1D, GlobalAveragePooling1D, \
+                         GlobalMaxPooling1D, concatenate
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv2D
 from keras.layers.embeddings import Embedding
@@ -179,7 +180,7 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
     - top_words - load the dataset but only keep the top n words, zero the rest
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
-    units = 300
+    units = 100
     inputs = Input(shape=(sequence_length,), dtype='int32')
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
@@ -234,10 +235,11 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     # units = 2 * EMBEDDING_DIM
-    units = 300
+    units = 200
     inputs = Input(shape=[sequence_length])
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
+    x = SpatialDropout1D(0.2)(x)
     x = Bidirectional(
         CuDNNGRU(
             units,
@@ -252,10 +254,12 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
             units,
             kernel_initializer=initializers.he_normal(),
             recurrent_regularizer=regularizers.l2(),
-            return_sequences=False),
+            return_sequences=True),
         merge_mode='sum')(x)
-    x = Dense(units)(x)
-    outputs = Dense(6, activation='sigmoid')(x)
+    avg_pool = GlobalAveragePooling1D()(x)
+    max_pool = GlobalMaxPooling1D()(x)
+    conc = concatenate([avg_pool, max_pool])
+    outputs = Dense(6, activation='sigmoid')(conc)
 
     gpus = get_gpus(gpus)
     if len(gpus) == 1:

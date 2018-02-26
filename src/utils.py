@@ -119,7 +119,7 @@ def load_test_train_data(train_file,
     """
     train_data = load_train_data(train_file, load_augmented_train_data)
     test_data = pd.read_csv(test_file, dtype={'comment_text': str})
-    tokenizer = Tokenizer(num_words)
+    tokenizer = Tokenizer(num_words, oov_token='unk')
     tokenizer.fit_on_texts(
         pd.concat(
             [train_data['comment_text'], test_data['comment_text']],

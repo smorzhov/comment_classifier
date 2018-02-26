@@ -28,8 +28,8 @@ TRAIN_PARAMS = {
     },
     'lstm': {
         False: {
-            'epochs': 10,
-            'batch_size': 256,
+            'epochs': 5,
+            'batch_size': 512,
             'pretrained': 'glove840B'
         },
         True: {
@@ -40,12 +40,12 @@ TRAIN_PARAMS = {
     },
     'gru': {
         False: {
-            'epochs': 3,
+            'epochs': 4,
             'batch_size': 256,
             'pretrained': 'glove840B'
         },
         True: {
-            'epochs': 5,
+            'epochs': 9,
             'batch_size': 5 * 256,
             'pretrained': 'glove840B'
         }
@@ -135,9 +135,8 @@ def main():
         print('Cannot open {} file'.format(args.train))
         return
     print('Loading train and test data')
-    top_words = 20000
-    max_comment_length = 1000
-    # pull data for train and test
+    top_words = 30000
+    max_comment_length = 350
     (data, labels), test_data, word_index = load_test_train_data(
         train_file=args.train,
         test_file=args.test,
@@ -145,7 +144,7 @@ def main():
         load_augmented_train_data=args.load_augmented,
         max_comment_length=max_comment_length)
     train_data, val_data, train_labels, val_labels = train_test_split(
-        data, labels, test_size=0.20, random_state=42)
+        data, labels, test_size=0.1, random_state=42)
     # loading the model
     parallel_model, model = get_model(
         args.model,
@@ -155,10 +154,8 @@ def main():
         pretrained=TRAIN_PARAMS[args.model][args.load_augmented]['pretrained'],
         sequence_length=train_data.shape[1])
     print('Training model')
-    # output summary of network's structure
     print(model.summary())
     ival = IntervalEvaluation(validation_data=(val_data, val_labels))
-    # train model
     history = parallel_model.fit(
         train_data,
         train_labels,
@@ -187,7 +184,6 @@ def main():
     # print("Accuracy: %.2f%%" % (scores[1] * 100))
 
     print('Generating predictions')
-    # test model
     predictions = model.predict(
         test_data,
         batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'])
