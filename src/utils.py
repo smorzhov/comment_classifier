@@ -97,13 +97,19 @@ def load_train_data(train_file, load_augmented_train_data=False):
     """
     Loads train data
     """
-    train_data = pd.read_csv(train_file, dtype={'comment_text': str})
+    train_data = pd.read_csv(train_file, dtype={'comment_text': str}).dropna()
+    train_data = train_data.drop(
+        train_data[train_data['comment_text'].str.len() < 4].index)
     if load_augmented_train_data:
         corpus = [train_data]
         prefix = path.splitext(train_file)[0]
         for suffix in AUGMENTED_TRAIN_FILES:
-            corpus.append(
-                pd.read_csv(prefix + suffix, dtype={'comment_text': str}))
+            data = pd.read_csv(
+                prefix + suffix, dtype={
+                    'comment_text': str
+                }).dropna()
+            data = data.drop(data[data['comment_text'].str.len() < 4].index)
+            corpus.append(data)
         # merge augmented and raw train data
         train_data = pd.concat(corpus, ignore_index=True)
     return train_data
