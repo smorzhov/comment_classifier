@@ -196,12 +196,25 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
     """
     Evaluates metrics by cross-validation the `model`
     """
+
+    def print_stage(index):
+        print('\n===============================')
+        print('STAGE {}'.format(index))
+        print('===============================\n')
+
+    def print_statistics(stage, arr):
+        print('{}  {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
+            stage, np.amin(arr), np.mean(arr), np.std(arr), np.max(arr)))
+
     print('Evaluating {} model'.format(args.model))
     seed = 42
     np.random.seed(seed)
     kfold = KFold(n_splits=10, shuffle=True, random_state=seed)
     cvscores = {'loss': [], 'acc': [], 'roc': []}
+    i = -1
     for train, test in kfold.split(data, labels):
+        i += 1
+        print_stage(i)
         # loading the model
         parallel_model, _ = get_model(
             args.model,
@@ -233,18 +246,9 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
         cvscores['acc'].append(scores[1])
         cvscores['roc'].append(roc_auc_score(labels[test], predictions))
     print('      min     mean    std     max')
-    print('roc   {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
-        np.amin(cvscores['roc']),
-        np.mean(cvscores['roc']),
-        np.std(cvscores['roc']), np.max(cvscores['roc'])))
-    print('loss  {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
-        np.amin(cvscores['loss']),
-        np.mean(cvscores['loss']),
-        np.std(cvscores['loss']), np.max(cvscores['loss'])))
-    print('acc   {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
-        np.amin(cvscores['acc']),
-        np.mean(cvscores['acc']),
-        np.std(cvscores['acc']), np.max(cvscores['acc'])))
+    print_statistics('roc ', cvscores['roc'])
+    print_statistics('loss', cvscores['loss'])
+    print_statistics('acc ', cvscores['acc'])
 
 
 def main():
