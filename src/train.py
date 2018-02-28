@@ -3,6 +3,7 @@ Trains model
 
 Usage: python train.py [-h]
 """
+import time
 from argparse import ArgumentParser
 from os import path, environ
 import pandas as pd
@@ -43,7 +44,7 @@ TRAIN_PARAMS = {
     },
     'gru': {
         False: {
-            'epochs': 4,
+            'epochs': 3,
             'batch_size': 256,
             'pretrained': 'glove840B'
         },
@@ -206,6 +207,7 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
         print('{}  {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
             stage, np.amin(arr), np.mean(arr), np.std(arr), np.max(arr)))
 
+    start = time.clock()
     print('Evaluating {} model'.format(args.model))
     seed = 42
     np.random.seed(seed)
@@ -249,6 +251,7 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
     print_statistics('roc ', cvscores['roc'])
     print_statistics('loss', cvscores['loss'])
     print_statistics('acc ', cvscores['acc'])
+    print('Time spent is : {}'.format(time.clock() - start))
 
 
 def main():
@@ -264,7 +267,7 @@ def main():
         return
     print('Loading train and test data')
     top_words = 30000
-    max_comment_length = 350
+    max_comment_length = 500
     (data, labels), test_data, word_index = load_test_train_data(
         train_file=args.train,
         test_file=args.test,

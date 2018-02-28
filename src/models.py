@@ -14,7 +14,7 @@ from keras.models import Sequential, Model
 from keras.layers import Dense, CuDNNLSTM, Bidirectional, Dropout, PReLU, \
                          CuDNNGRU, MaxPooling2D, Input, Activation, \
                          SpatialDropout1D, GlobalAveragePooling1D, \
-                         GlobalMaxPooling1D, GaussianNoise, concatenate
+                         GlobalMaxPooling1D, concatenate
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv2D
 from keras.layers.embeddings import Embedding
@@ -234,12 +234,11 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     # units = 2 * EMBEDDING_DIM
-    units = 200
-    inputs = Input(shape=[sequence_length])
+    units = 300
+    inputs = Input(shape=(sequence_length,))
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
     x = SpatialDropout1D(0.2)(x)
-    x = GaussianNoise(0.2)(x)
     x = Bidirectional(
         CuDNNGRU(
             units,
@@ -247,8 +246,8 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
             recurrent_regularizer=regularizers.l2(),
             return_sequences=True),
         merge_mode='concat')(x)
-    x = PReLU()(x)
     x = Dropout(0.5)(x)
+    x = PReLU()(x)
     x = Bidirectional(
         CuDNNGRU(
             units,
