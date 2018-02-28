@@ -6,10 +6,13 @@ Usage: python train.py [-h]
 from argparse import ArgumentParser
 from os import path, environ
 import pandas as pd
+import numpy as np
+from keras.wrappers.scikit_learn import KerasClassifier
 from keras.callbacks import EarlyStopping
-from sklearn.model_selection import train_test_split
-from utils import PROCESSED_DATA_PATH, MODELS_PATH
-from utils import load_test_train_data, try_makedirs
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split, KFold
+from utils import PROCESSED_DATA_PATH, MODELS_PATH, load_test_train_data, \
+                  try_makedirs
 from models import get_model, IntervalEvaluation
 
 # False - don't use augmented train data, True - use it
@@ -91,6 +94,8 @@ def init_argparse():
         help="A list of GPU device numbers ('1', '1,2,5')",
         default=0,
         type=str)
+    parser.add_argument(
+        '--cv', help="Cross validation of the model", action='store_true')
     return parser
 
 
@@ -123,26 +128,10 @@ def plot(history, aucs, model_path=None):
     plt.savefig(path.join(model_path, 'loss.png'))
 
 
-def main():
+def train_and_predict(data, labels, test_data, word_index, top_words, args):
     """
-    Main function
+    Trains model and makes predictions file
     """
-    args = init_argparse().parse_args()
-
-    environ["CUDA_VISIBLE_DEVICES"] = args.gpus
-
-    if not path.isfile(args.train):
-        print('Cannot open {} file'.format(args.train))
-        return
-    print('Loading train and test data')
-    top_words = 30000
-    max_comment_length = 350
-    (data, labels), test_data, word_index = load_test_train_data(
-        train_file=args.train,
-        test_file=args.test,
-        num_words=top_words,
-        load_augmented_train_data=args.load_augmented,
-        max_comment_length=max_comment_length)
     train_data, val_data, train_labels, val_labels = train_test_split(
         data, labels, test_size=0.1, random_state=42)
     # loading the model
@@ -153,6 +142,7 @@ def main():
         word_index=word_index,
         pretrained=TRAIN_PARAMS[args.model][args.load_augmented]['pretrained'],
         sequence_length=train_data.shape[1])
+    # sequence_length = train_data.shape[1]= max_comment_length
     print('Training model')
     print(model.summary())
     ival = IntervalEvaluation(validation_data=(val_data, val_labels))
@@ -199,6 +189,89 @@ def main():
         path.join(model_path, 'predictions.csv'), index=False)
     # Don't round predictions.
     # Rounding makes predictions much worse!
+
+
+def evaluate_model(data, labels, test_data, word_index, top_words,
+                   max_comment_length, args):
+    """
+    Evaluates metrics by cross-validation the `model`
+    """
+    print('Evaluating {} model'.format(args.model))
+    seed = 42
+    np.random.seed(seed)
+    kfold = KFold(n_splits=10, shuffle=True, random_state=seed)
+    cvscores = {'loss': [], 'acc': [], 'roc': []}
+    for train, test in kfold.split(data, labels):
+        # loading the model
+        parallel_model, _ = get_model(
+            args.model,
+            gpus=args.gpus,
+            top_words=top_words,
+            word_index=word_index,
+            pretrained=TRAIN_PARAMS[args.model][args.load_augmented][
+                'pretrained'],
+            sequence_length=data[train].shape[1])
+        parallel_model.fit(
+            data[train],
+            labels[train],
+            validation_data=(data[test], labels[test]),
+            epochs=TRAIN_PARAMS[args.model][args.load_augmented]['epochs'],
+            batch_size=TRAIN_PARAMS[args.model][args.load_augmented][
+                'batch_size'])
+        scores = parallel_model.evaluate(
+            data[test],
+            labels[test],
+            batch_size=TRAIN_PARAMS[args.model][args.load_augmented][
+                'batch_size'],
+            verbose=0)
+        # scores - ['loss', 'acc']
+        predictions = parallel_model.predict(
+            data[test],
+            batch_size=TRAIN_PARAMS[args.model][args.load_augmented][
+                'batch_size'])
+        cvscores['loss'].append(scores[0])
+        cvscores['acc'].append(scores[1])
+        cvscores['roc'].append(roc_auc_score(labels[test], predictions))
+    print('      min     mean    std     max')
+    print('roc   {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
+        np.amin(cvscores['roc']),
+        np.mean(cvscores['roc']),
+        np.std(cvscores['roc']), np.max(cvscores['roc'])))
+    print('loss  {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
+        np.amin(cvscores['loss']),
+        np.mean(cvscores['loss']),
+        np.std(cvscores['loss']), np.max(cvscores['loss'])))
+    print('acc   {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
+        np.amin(cvscores['acc']),
+        np.mean(cvscores['acc']),
+        np.std(cvscores['acc']), np.max(cvscores['acc'])))
+
+
+def main():
+    """
+    Main function
+    """
+    args = init_argparse().parse_args()
+
+    environ["CUDA_VISIBLE_DEVICES"] = args.gpus
+
+    if not path.isfile(args.train):
+        print('Cannot open {} file'.format(args.train))
+        return
+    print('Loading train and test data')
+    top_words = 30000
+    max_comment_length = 350
+    (data, labels), test_data, word_index = load_test_train_data(
+        train_file=args.train,
+        test_file=args.test,
+        num_words=top_words,
+        load_augmented_train_data=args.load_augmented,
+        max_comment_length=max_comment_length)
+    if args.cv:
+        evaluate_model(data, labels, test_data, word_index, top_words,
+                       max_comment_length, args)
+    else:
+        train_and_predict(data, labels, test_data, word_index, top_words, args)
 
 
 if __name__ == '__main__':
