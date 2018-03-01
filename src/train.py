@@ -3,7 +3,8 @@ Trains model
 
 Usage: python train.py [-h]
 """
-import time
+from time import clock
+from datetime import timedelta
 from argparse import ArgumentParser
 from os import path, environ
 import pandas as pd
@@ -44,7 +45,7 @@ TRAIN_PARAMS = {
     },
     'gru': {
         False: {
-            'epochs': 3,
+            'epochs': 9,
             'batch_size': 256,
             'pretrained': 'glove840B'
         },
@@ -207,7 +208,7 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
         print('{}  {:.4f}  {:.4f}  {:.4f}  {:.4f}'.format(
             stage, np.amin(arr), np.mean(arr), np.std(arr), np.max(arr)))
 
-    start = time.clock()
+    start = clock()
     print('Evaluating {} model'.format(args.model))
     seed = 42
     np.random.seed(seed)
@@ -251,7 +252,7 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
     print_statistics('roc ', cvscores['roc'])
     print_statistics('loss', cvscores['loss'])
     print_statistics('acc ', cvscores['acc'])
-    print('Time spent is : {}'.format(time.clock() - start))
+    print('Time spent is : {} (hh:mm:ss)'.format(timedelta(clock() - start)))
 
 
 def main():
