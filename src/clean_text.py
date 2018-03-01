@@ -6,7 +6,7 @@ Usage: python text_cleaner.py [-h]
 Also, it can be imported into another module
 """
 import argparse
-import HTMLParser
+from html.parser import HTMLParser
 from string import punctuation
 from itertools import groupby
 from os import path
@@ -17,7 +17,7 @@ import numpy as np
 from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH, AUGMENTED_TRAIN_FILES, \
                   try_makedirs, get_stop_words
 
-HTML_PARSER = HTMLParser.HTMLParser()
+HTML_PARSER = HTMLParser()
 STOP_WORDS = get_stop_words()
 """
 the web url matching regex used by markdown
@@ -200,7 +200,10 @@ def clean_comment(comment):
 
 
 def process(series):
-    return u'\"{}\"'.format(clean_comment(series['comment_text']))
+    comment = clean_comment(series['comment_text'])
+    # if comment is not empty
+    if comment:
+        return u'\"{}\"'.format(clean_comment(series['comment_text']).strip('\"'))
 
 
 def call_process(df):

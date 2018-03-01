@@ -22,7 +22,6 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
-*.pyc
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -71,6 +70,7 @@ src/data/raw
 src/log
 src/models
 src/pickles
+src/jupyter
 
 # Data
 *train.csv
