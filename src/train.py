@@ -4,7 +4,6 @@ Trains model
 Usage: python train.py [-h]
 """
 from time import clock
-from datetime import timedelta
 from argparse import ArgumentParser
 from os import path, environ
 import pandas as pd
@@ -33,8 +32,8 @@ TRAIN_PARAMS = {
     },
     'lstm': {
         False: {
-            'epochs': 5,
-            'batch_size': 512,
+            'epochs': 4,
+            'batch_size': 256,
             'pretrained': 'glove840B'
         },
         True: {
@@ -45,7 +44,7 @@ TRAIN_PARAMS = {
     },
     'gru': {
         False: {
-            'epochs': 9,
+            'epochs': 5,
             'batch_size': 256,
             'pretrained': 'glove840B'
         },
@@ -159,7 +158,7 @@ def train_and_predict(data, labels, test_data, word_index, top_words, args):
             EarlyStopping(monitor='val_loss', min_delta=0, patience=3)
         ])
     # history of training
-    print(history.history.keys())
+    # print(history.history.keys())
     # Saving architecture + weights + optimizer state
     model_path = path.join(MODELS_PATH, '{}_{:.4f}_{:.4f}_{:.4f}'.format(
         args.model, ival.aucs[-1], history.history['val_loss'][-1]
@@ -252,7 +251,9 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
     print_statistics('roc ', cvscores['roc'])
     print_statistics('loss', cvscores['loss'])
     print_statistics('acc ', cvscores['acc'])
-    print('Time spent is : {} (hh:mm:ss)'.format(timedelta(clock() - start)))
+    m, s = divmod(clock() - start, 60)
+    h, m = divmod(m, 60)
+    print('Time spent is : {}:{}:{} (hh:mm:ss)'.format(int(h), int(m), int(s)))
 
 
 def main():
@@ -267,7 +268,7 @@ def main():
         print('Cannot open {} file'.format(args.train))
         return
     print('Loading train and test data')
-    top_words = 30000
+    top_words = 50000
     max_comment_length = 500
     (data, labels), test_data, word_index = load_test_train_data(
         train_file=args.train,

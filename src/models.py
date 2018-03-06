@@ -14,11 +14,12 @@ from keras.models import Sequential, Model
 from keras.layers import Layer, Dense, CuDNNLSTM, Bidirectional, Dropout, \
                          CuDNNGRU, MaxPooling2D, Input, Activation, \
                          SpatialDropout1D, GlobalAveragePooling1D, \
-                         GlobalMaxPooling1D, BatchNormalization, concatenate
+                         GlobalMaxPooling1D, BatchNormalization, RepeatVector, \
+                         MaxPooling1D, concatenate
 from keras.layers.core import Reshape, Flatten
-from keras.layers.convolutional import Conv2D
+from keras.layers.convolutional import Conv1D, Conv2D
 from keras.layers.embeddings import Embedding
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 from keras.callbacks import Callback
 from keras.utils import multi_gpu_model
 from sklearn.metrics import roc_auc_score
@@ -259,30 +260,24 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
     - top_words - load the dataset but only keep the top n words, zero the rest
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
-    units = 100
+    units = 256
     inputs = Input(shape=(sequence_length, ), dtype='int32')
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
     # For mor detais about kernel_constraint - see chapter 5.1
     # in http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf
+    x = SpatialDropout1D(0.2)(x)
     x = Bidirectional(
         CuDNNLSTM(
             units,
+            kernel_initializer=initializers.he_uniform(),
             recurrent_regularizer=regularizers.l2(),
             return_sequences=True),
         merge_mode='concat')(x)
-    x = Activation('tanh')(x)
-    x = Dropout(0.5)(x)
-    x = Bidirectional(
-        CuDNNLSTM(
-            units,
-            recurrent_regularizer=regularizers.l2(),
-            return_sequences=False),
-        merge_mode='concat')(x)
-    x = Activation('tanh')(x)
-    x = Dropout(0.5)(x)
-    x = Dense(6)(x)
-    output = PReLU()(x)
+    avg_pool = GlobalAveragePooling1D()(x)
+    max_pool = GlobalMaxPooling1D()(x)
+    x = concatenate([avg_pool, max_pool])
+    output = Dense(6, activation='sigmoid')(x)
     gpus = get_gpus(gpus)
     if len(gpus) == 1:
         with K.tf.device('/gpu:{}'.format(gpus[0])):
@@ -295,7 +290,7 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
         parallel_model = multi_gpu_model(model, gpus=gpus)
     parallel_model.compile(
         loss='binary_crossentropy',
-        optimizer=RMSprop(clipvalue=1, clipnorm=1),
+        optimizer=Adam(lr=1e-3),
         metrics=['accuracy'])
     return parallel_model, model
 
@@ -312,8 +307,7 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     - top_words - load the dataset but only keep the top n words, zero the rest
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
-    # units = 2 * EMBEDDING_DIM
-    units = 300
+    units = 256
     inputs = Input(shape=(sequence_length, ))
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
@@ -321,19 +315,50 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     x = Bidirectional(
         CuDNNGRU(
             units,
-            kernel_initializer=initializers.he_normal(),
+            kernel_initializer=initializers.he_uniform(),
             recurrent_regularizer=regularizers.l2(),
             return_sequences=True),
         merge_mode='concat')(x)
-    att = Attention(500)(x)
-    att = Dropout(0.5)(att)
+    # x = Dropout(0.5)(x)
+    tower_1 = Conv1D(
+        filters=64,
+        kernel_size=1,
+        padding='valid',
+        activation='relu',
+        kernel_initializer=initializers.he_uniform())(x)
+    tower_1 = Conv1D(
+        filters=64,
+        kernel_size=3,
+        padding='valid',
+        activation='relu',
+        kernel_initializer=initializers.he_uniform())(tower_1)
+    tower_2 = Conv1D(
+        filters=64,
+        kernel_size=1,
+        padding='valid',
+        activation='relu',
+        kernel_initializer=initializers.he_uniform())(x)
+    tower_2 = Conv1D(
+        filters=64,
+        kernel_size=5,
+        padding='valid',
+        activation='relu',
+        kernel_initializer=initializers.he_uniform())(tower_2)
+    tower_3 = MaxPooling1D(pool_size=3, strides=1)(x)
+    tower_3 = Conv1D(
+        filters=64,
+        kernel_size=1,
+        padding='valid',
+        activation='relu',
+        kernel_initializer=initializers.he_uniform())(tower_3)
+    x = concatenate([tower_1, tower_2, tower_3], axis=1)
+    att = Attention(1492)(x)
+    att = Dropout(0.2)(att)
     avg_pool = GlobalAveragePooling1D()(x)
-    avg_pool = Dropout(0.5)(avg_pool)
+    avg_pool = Dropout(0.2)(avg_pool)
     max_pool = GlobalMaxPooling1D()(x)
-    max_pool = Dropout(0.5)(max_pool)
-    conc = concatenate([att, avg_pool, max_pool])
-    x = Dropout(0.5)(conc)
-    x = BatchNormalization()(x)
+    max_pool = Dropout(0.2)(max_pool)
+    x = concatenate([att, avg_pool, max_pool])
     outputs = Dense(6, activation='sigmoid')(x)
 
     gpus = get_gpus(gpus)
