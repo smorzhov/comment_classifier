@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from os import path, environ
 import pandas as pd
 import numpy as np
+from keras.utils import plot_model
 from keras.wrappers.scikit_learn import KerasClassifier
 from keras.callbacks import EarlyStopping
 from sklearn.metrics import roc_auc_score
@@ -117,8 +118,8 @@ def plot(history, aucs, model_path=None):
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
     plt.savefig(path.join(model_path, 'accuracy.png'))
+    plt.gcf().clear()
     # summarize history for loss
-    # TODO: some strange curves at the top of graphic
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.plot(aucs)
@@ -167,6 +168,7 @@ def train_and_predict(data, labels, test_data, word_index, top_words, args):
         if 'val_acc' in history.history else history.history['acc'][-1]))
     print('Saving model')
     try_makedirs(model_path)
+    plot_model(model, path.join(model_path, 'model.png'), show_shapes=True)
     model.save(path.join(model_path, 'model.h5'))
     plot(history, ival.aucs, model_path)
     # Calculate metrics of the model
