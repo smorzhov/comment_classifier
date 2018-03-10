@@ -12,6 +12,11 @@ import pandas as pd
 import numpy as np
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
+from sklearn.metrics import confusion_matrix
+import matplotlib
+# generates images without having a window appear
+matplotlib.use('Agg')
+import matplotlib.pylab as plt
 """
 Absolute utils.py file path. It is considered as the project root path.
 """
@@ -67,32 +72,6 @@ def try_makedirs(name):
         return
 
 
-def get_logger(file):
-    """
-    Returns logger object
-
-    Usage:
-    ```python
-    logger = get_logger('path_to_log_file')
-    logger.info('It will be written into <path_to_log_file> file')
-    ```
-    """
-    log_path = path.join(CWD, 'log')
-    try_makedirs(log_path)
-    logging.basicConfig(
-        format=u'%(levelname)-8s [%(asctime)s] %(message)s',
-        level=logging.INFO,
-        filename=path.join(log_path, file))
-    return logging
-
-
-def get_timestamp():
-    """
-    Returns timestamp in YYYY-MM-DDTHH:MM:SS format
-    """
-    return datetime.datetime.today().strftime('%Y-%m-%dT%H:%M:%S')
-
-
 def load_train_data(train_file, load_augmented_train_data=False):
     """
     Loads train data
@@ -105,9 +84,7 @@ def load_train_data(train_file, load_augmented_train_data=False):
         prefix = path.splitext(train_file)[0]
         for suffix in AUGMENTED_TRAIN_FILES:
             data = pd.read_csv(
-                prefix + suffix, dtype={
-                    'comment_text': str
-                }).dropna()
+                prefix + suffix, dtype={'comment_text': str}).dropna()
             data = data.drop(data[data['comment_text'].str.len() < 4].index)
             corpus.append(data)
         # merge augmented and raw train data
@@ -148,3 +125,65 @@ def load_test_train_data(train_file,
         maxlen=max_comment_length)
     return (np.asarray(x_train),
             np.asarray(y_train)), np.asarray(x_test), tokenizer.word_index
+
+
+def plot_loss_acc(history, aucs, model_path=None):
+    """
+    Saves into files accuracy and loss plots
+    """
+    # summarize history for accuracy
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig(path.join(model_path, 'accuracy.png'))
+    plt.gcf().clear()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.plot(aucs)
+    plt.title('model loss, ROC AUC')
+    plt.ylabel('loss, ROC AUC')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test', 'ROC AUC'], loc='upper left')
+    plt.savefig(path.join(model_path, 'loss.png'))
+
+
+def plot_confusion_matrices(val_labels, val_predictions, model_path=None):
+    """
+    Saves confusion matrices into file
+    """
+    matrices = []
+    class_names = [
+        'toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate'
+    ]
+    # transform possibilities to labels of classes
+    val_preds = np.zeros(val_predictions.shape, dtype=int)
+    val_preds[val_predictions > 0.5] = 1
+    # build set of confusion matrices
+    for cl in range(val_labels.shape[1]):
+        y_true = val_labels[:, cl].tolist()
+        y_pred = val_preds[:, cl].tolist()
+        matrices.append(confusion_matrix(y_true, y_pred))
+    for idx in range(len(matrices)):
+        cur_matr = matrices[idx]
+        _, ax = plt.subplots(figsize=(8, 8))
+        ax.matshow(cur_matr, cmap=plt.cm.Blues, alpha=0.2)
+        plt.title(class_names[idx])
+        plt.ylabel('real class', fontsize=16)
+        plt.xlabel('predicted class', fontsize=16)
+        # fill the plot of data from confusion matrix
+        for i in range(cur_matr.shape[0]):
+            for j in range(cur_matr.shape[1]):
+                ax.text(
+                    x=j,
+                    y=i,
+                    s=cur_matr[i, j],
+                    va='center',
+                    ha='center',
+                    fontsize=24)
+        file_name = '{}_confusion_matrix.png'.format(str(class_names[idx]))
+        plt.savefig(path.join(model_path, file_name))
+        plt.clf()

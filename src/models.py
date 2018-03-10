@@ -11,11 +11,11 @@ from keras import regularizers
 from keras import initializers
 from keras import constraints
 from keras.models import Sequential, Model
-from keras.layers import Layer, Dense, CuDNNLSTM, Bidirectional, Dropout, \
-                         CuDNNGRU, MaxPooling2D, Input, Activation, \
-                         SpatialDropout1D, GlobalAveragePooling1D, \
-                         GlobalMaxPooling1D, BatchNormalization, RepeatVector, \
-                         MaxPooling1D, concatenate
+from keras.layers import (Layer, Dense, CuDNNLSTM, Bidirectional, Dropout,
+                          CuDNNGRU, MaxPooling2D, Input, Activation,
+                          SpatialDropout1D, GlobalAveragePooling1D,
+                          GlobalMaxPooling1D, BatchNormalization, RepeatVector,
+                          MaxPooling1D, concatenate)
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv1D, Conv2D
 from keras.layers.embeddings import Embedding
@@ -25,9 +25,9 @@ from keras.utils import multi_gpu_model
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from gensim.models.keyedvectors import KeyedVectors
-from utils import WORD2VEC_MODEL_PATH, GLOVE_6B_MODEL_PATH, \
-                  GLOVE_840B_MODEL_PATH, FAST_TEXT_MODEL_PATH, PICKLES_PATH, \
-                  try_makedirs
+from utils import (WORD2VEC_MODEL_PATH, GLOVE_6B_MODEL_PATH,
+                   GLOVE_840B_MODEL_PATH, FAST_TEXT_MODEL_PATH, PICKLES_PATH,
+                   try_makedirs)
 
 EMBEDDING_DIM = 300
 
@@ -53,11 +53,12 @@ class IntervalEvaluation(Callback):  # pylint: disable=R0903
             # for models that was created using functional API
             y_pred = self.model.predict(self.x_val, verbose=0)
         self.aucs.append(roc_auc_score(self.y_val, y_pred))
-        print('\repoch: {:d} - ROC AUC: {:.6f}'.format(epoch + 1,
-                                                       self.aucs[-1]))
+        print(
+            '\repoch: {:d} - ROC AUC: {:.6f}'.format(epoch + 1, self.aucs[-1]))
 
 
 class Attention(Layer):
+
     def __init__(self,
                  step_dim,
                  W_regularizer=None,
@@ -84,7 +85,7 @@ class Attention(Layer):
         assert len(input_shape) == 3
 
         self.W = self.add_weight(
-            (input_shape[-1], ),
+            (input_shape[-1],),
             initializer=self.init,
             name='{}_W'.format(self.name),
             regularizer=self.W_regularizer,
@@ -93,7 +94,7 @@ class Attention(Layer):
 
         if self.bias:
             self.b = self.add_weight(
-                (input_shape[1], ),
+                (input_shape[1],),
                 initializer='zero',
                 name='{}_b'.format(self.name),
                 regularizer=self.b_regularizer,
@@ -199,9 +200,9 @@ def cnn(top_words,
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
     """
-    inputs = Input(shape=(sequence_length, ))
-    embedding = get_pretrained_embedding(top_words, sequence_length,
-                                         word_index, pretrained)(inputs)
+    inputs = Input(shape=(sequence_length,))
+    embedding = get_pretrained_embedding(top_words, sequence_length, word_index,
+                                         pretrained)(inputs)
     reshape = Reshape((sequence_length, EMBEDDING_DIM, 1))(embedding)
 
     conv_0 = Conv2D(
@@ -226,11 +227,10 @@ def cnn(top_words,
 
     merged_tensor = concatenate([maxpool_0, maxpool_1, maxpool_2], axis=1)
     flatten = Flatten()(merged_tensor)
-    reshape = Reshape((3 * num_filters, ))(flatten)
+    reshape = Reshape((3 * num_filters,))(flatten)
     dropout = Dropout(drop)(reshape)
     output = Dense(
-        units=6,
-        activation='sigmoid',
+        units=6, activation='sigmoid',
         kernel_regularizer=regularizers.l2(0.01))(dropout)
 
     gpus = get_gpus(gpus)
@@ -261,7 +261,7 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     units = 256
-    inputs = Input(shape=(sequence_length, ), dtype='int32')
+    inputs = Input(shape=(sequence_length,), dtype='int32')
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
     # For mor detais about kernel_constraint - see chapter 5.1
@@ -308,7 +308,7 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     units = 256
-    inputs = Input(shape=(sequence_length, ))
+    inputs = Input(shape=(sequence_length,))
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
     x = SpatialDropout1D(0.2)(x)
@@ -412,8 +412,8 @@ def get_pretrained_embedding(top_words, sequence_length, word_index,
             embedding_vector = word_vectors[word]
             embedding_matrix[i] = embedding_vector
         except KeyError:
-            embedding_matrix[i] = np.random.normal(0, np.sqrt(0.25),
-                                                   EMBEDDING_DIM)
+            embedding_matrix[i] = np.random.normal(0,
+                                                   np.sqrt(0.25), EMBEDDING_DIM)
 
     return Embedding(
         input_dim=top_words,
@@ -430,8 +430,8 @@ def load_txt_model(model_path):
     where numbers are separated with spaces
     """
     try_makedirs(PICKLES_PATH)
-    pickled_model = path.join(PICKLES_PATH, '{}.pickle'.format(
-        path.basename(model_path)))
+    pickled_model = path.join(PICKLES_PATH,
+                              '{}.pickle'.format(path.basename(model_path)))
     try:
         # load ready text model
         with open(pickled_model, 'rb') as model:

@@ -11,10 +11,10 @@ import numpy as np
 from keras.utils import plot_model
 from keras.wrappers.scikit_learn import KerasClassifier
 from keras.callbacks import EarlyStopping
-from sklearn.metrics import roc_auc_score, confusion_matrix
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split, KFold
-from utils import PROCESSED_DATA_PATH, MODELS_PATH, load_test_train_data, \
-                  try_makedirs
+from utils import (PROCESSED_DATA_PATH, MODELS_PATH, load_test_train_data,
+                   try_makedirs, plot_loss_acc, plot_confusion_matrices)
 from models import get_model, IntervalEvaluation
 
 # False - don't use augmented train data, True - use it
@@ -101,78 +101,6 @@ def init_argparse():
     return parser
 
 
-def confusion_matrices(val_labels, val_predictions):
-    """
-    Build confusion matrices for every class
-
-    Returns list of confusion matrices
-    """
-    res = []
-    # transform possibilities to labels of classes
-    val_preds = np.zeros(val_predictions.shape, dtype=int)
-    val_preds[val_predictions>0.5] = 1
-    # build set of confusion matrices
-    for cl in range(val_labels.shape[1]):
-        y_true = val_labels[:, cl].tolist()
-        y_pred = val_preds[:, cl].tolist()
-        res.append(confusion_matrix(y_true, y_pred))
-    return res
-
-
-def plot_confusion_matrices(matrices, model_path=None):
-    """
-    Saves confusion matrices into file
-    """
-    class_names = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
-    import matplotlib
-    # generates images without having a window appear
-    matplotlib.use('Agg')
-    import matplotlib.pylab as plt
-    for idx in range(len(matrices)):
-        cur_matr = matrices[idx]
-        fig, ax = plt.subplots(figsize=(8, 8))
-        ax.matshow(cur_matr, cmap=plt.cm.Blues, alpha=0.2)
-        plt.title(class_names[idx])
-        plt.ylabel('real class', fontsize=16)
-        plt.xlabel('predicted class', fontsize=16)
-        # fill the plot of data from confusion matrix
-        for i in range(cur_matr.shape[0]):
-            for j in range(cur_matr.shape[1]):
-                ax.text(x=j, y=i, s=cur_matr[i, j], va='center', ha='center', fontsize=24)
-        file_name = '{}_confusion_matrix.png'.format(str(class_names[idx]))
-        plt.savefig(path.join(model_path, file_name))
-        plt.clf()
-
-
-def plot(history, aucs, model_path=None):
-    """
-    Saves into files accuracy and loss plots
-    """
-    import matplotlib
-    # generates images without having a window appear
-    matplotlib.use('Agg')
-    import matplotlib.pylab as plt
-
-    # summarize history for accuracy
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.title('model accuracy')
-    plt.ylabel('accuracy')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
-    plt.savefig(path.join(model_path, 'accuracy.png'))
-    plt.gcf().clear()
-    # summarize history for loss
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.plot(aucs)
-    plt.title('model loss, ROC AUC')
-    plt.ylabel('loss, ROC AUC')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test', 'ROC AUC'], loc='upper left')
-    plt.savefig(path.join(model_path, 'loss.png'))
-
-
 def train_and_predict(data, labels, test_data, word_index, top_words, args):
     """
     Trains model and makes predictions file
@@ -209,23 +137,17 @@ def train_and_predict(data, labels, test_data, word_index, top_words, args):
         if 'val_loss' in history.history else history.history['loss'][-1],
         history.history['val_acc'][-1]
         if 'val_acc' in history.history else history.history['acc'][-1]))
-    print('Saving model')
     try_makedirs(model_path)
     plot_model(model, path.join(model_path, 'model.png'), show_shapes=True)
+    plot_loss_acc(history, ival.aucs, model_path)
+    print('Saving model')
     model.save(path.join(model_path, 'model.h5'))
-    plot(history, ival.aucs, model_path)
-    # Calculate metrics of the model
-    # scores = model.evaluate(x_test, y_test, verbose=0)
-    # print("Loss: %.2f%%" % (scores[0] * 100))
-    # print("Accuracy: %.2f%%" % (scores[1] * 100))
-
     # Building confusion matrices for every class for validation data
     print("Building confusion matrices")
     val_preds = model.predict(
         val_data,
         batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'])
-    conf_matrices = confusion_matrices(val_labels, val_preds)
-    plot_confusion_matrices(conf_matrices, model_path)
+    plot_confusion_matrices(val_labels, val_preds, model_path)
 
     print('Generating predictions')
     predictions = model.predict(
