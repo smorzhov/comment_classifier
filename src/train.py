@@ -139,7 +139,7 @@ def plot_confusion_matrices(matrices, model_path=None):
         for i in range(cur_matr.shape[0]):
             for j in range(cur_matr.shape[1]):
                 ax.text(x=j, y=i, s=cur_matr[i, j], va='center', ha='center', fontsize=24)
-        file_name = '{}_confusion_matrix.png'.format(class_names[idx])
+        file_name = '{}_confusion_matrix.png'.format(str(class_names[idx]))
         plt.savefig(path.join(model_path, file_name))
         plt.clf()
 
@@ -225,7 +225,7 @@ def train_and_predict(data, labels, test_data, word_index, top_words, args):
         val_data,
         batch_size=TRAIN_PARAMS[args.model][args.load_augmented]['batch_size'])
     conf_matrices = confusion_matrices(val_labels, val_preds)
-    plot_confusion_matrices(conf_matrices, model_path=None)
+    plot_confusion_matrices(conf_matrices, model_path)
 
     print('Generating predictions')
     predictions = model.predict(
