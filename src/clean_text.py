@@ -6,7 +6,10 @@ Usage: python text_cleaner.py [-h]
 Also, it can be imported into another module
 """
 import argparse
-from html.parser import HTMLParser
+try:
+    from html.parser import HTMLParser
+except ImportError:
+    import HTMLParser
 from string import punctuation
 from itertools import groupby
 from os import path
@@ -108,6 +111,9 @@ def remove_punctuation(comment):
     new_comment = re.sub(r"[\s]+(?=[!.,'])", '', new_comment)
     # add space after punctuation
     new_comment = re.sub(r"([!.,'])(?=[\w\d])", r'\1 ', new_comment)
+    # ! -> shriek
+    # TODO This sub can be useful for raw data (to search toxic comments)
+    new_comment = re.sub(r"!", ' shriek', new_comment)
     clean_comment = new_comment.strip()
     return clean_comment
 
@@ -203,7 +209,7 @@ def process(series):
     comment = clean_comment(series['comment_text'])
     # if comment is not empty
     if comment:
-        return u'\"{}\"'.format(clean_comment(series['comment_text']).strip('\"'))
+        return u'\"{}\"'.format(clean_comment(series['comment_text']))
 
 
 def call_process(df):
