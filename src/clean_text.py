@@ -17,8 +17,8 @@ from multiprocessing import Process, Pool, cpu_count
 import pandas as pd
 import re
 import numpy as np
-from utils import PROCESSED_DATA_PATH, RAW_DATA_PATH, AUGMENTED_TRAIN_FILES, \
-                  try_makedirs, get_stop_words
+from utils import (PROCESSED_DATA_PATH, RAW_DATA_PATH, AUGMENTED_TRAIN_FILES,
+                   try_makedirs, get_stop_words)
 
 HTML_PARSER = HTMLParser()
 STOP_WORDS = get_stop_words()

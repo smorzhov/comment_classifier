@@ -11,8 +11,8 @@ from threading import Thread
 from os import path
 import nltk
 import pandas as pd
-from utils import RAW_DATA_PATH, LOG_PATH, RAW_DATA_PATH, \
-                  try_makedirs, load_train_data
+from utils import (RAW_DATA_PATH, LOG_PATH, RAW_DATA_PATH, try_makedirs,
+                   load_train_data)
 
 
 def freq_dist(train_data, result, top=50, low=50):
@@ -89,8 +89,7 @@ def create_freq_dist(data, file_name):
     Creates word_freq file
     """
     pddist = pd.DataFrame(data, columns=['word', 'freq'])
-    pddist.to_csv(
-        path.join(LOG_PATH, file_name), index=False, encoding='utf-8')
+    pddist.to_csv(path.join(LOG_PATH, file_name), index=False, encoding='utf-8')
 
 
 def count_comment_statistics(data, file_name):
