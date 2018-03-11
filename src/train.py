@@ -33,7 +33,7 @@ TRAIN_PARAMS = {
     },
     'lstm': {
         False: {
-            'epochs': 4,
+            'epochs': 5,
             'batch_size': 256,
             'pretrained': 'glove840B'
         },
@@ -243,7 +243,7 @@ def main():
         print('Cannot open {} file'.format(args.train))
         return
     print('Loading train and test data')
-    top_words = 50000
+    top_words = 100000
     max_comment_length = 500
     (data, labels), test_data, word_index = load_test_train_data(
         train_file=args.train,

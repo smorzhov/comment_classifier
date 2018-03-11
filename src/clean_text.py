@@ -6,7 +6,7 @@ Usage: python text_cleaner.py [-h]
 Also, it can be imported into another module
 """
 import argparse
-from html.parser import HTMLParser
+from HTMLParser import HTMLParser
 from string import punctuation
 from itertools import groupby
 from os import path
@@ -37,6 +37,8 @@ ALL_PUNCT_PATTERN = re.compile(
     '[%s]' % re.escape(punctuation.replace('\'', '')))
 MARKS = {r'[\s]+.': '. ', r',': ', ', r'?': '? ', r'!': '! '}
 PUNCTUATION = set(punctuation)  # string of ASCII punctuation
+EXCLAMATION_TOKEN = ' exclmrk '
+QUESTION_TOKEN = ' qstmrk '
 
 
 def init_argparse():
@@ -103,11 +105,11 @@ def remove_punctuation(comment):
     # removes other punctuation
     new_comment = re.sub(r"[^\w\s!?,.']", ' ', comment)
     # removes duplicate punctuation
-    new_comment = re.sub(r"([\s!?,.'])\1+", r'\1', new_comment)
+    new_comment = re.sub(r"([\s,.'])\1+", r'\1', new_comment)
     # remove spaces before punctuation
     new_comment = re.sub(r"[\s]+(?=[!.,'])", '', new_comment)
     # add space after punctuation
-    new_comment = re.sub(r"([!.,'])(?=[\w\d])", r'\1 ', new_comment)
+    new_comment = re.sub(r"([?!.,])(?=[\w\d])", r'\1 ', new_comment)
     clean_comment = new_comment.strip()
     return clean_comment
 
@@ -178,6 +180,20 @@ def remove_stop_words(comment):
     return ' '.join(new_comment)
 
 
+def replace_marks_with_tokens(comment, exclamation=True, question=True):
+    """
+    '!' -> 'exclmrk', '?' -> 'qstmrk'
+
+    Returns clean comment
+    """
+    new_comment = comment
+    if exclamation:
+        new_comment = new_comment.replace('!', EXCLAMATION_TOKEN)
+    if question:
+        new_comment = new_comment.replace('?', QUESTION_TOKEN)
+    return new_comment
+
+
 def clean_comment(comment):
     """
     Cleans comment
@@ -190,20 +206,18 @@ def clean_comment(comment):
     clean_comment = remove_urls(comment)
     clean_comment = remove_emojis(clean_comment)
     clean_comment = standardize_words(clean_comment)
-    clean_comment = remove_stop_words(clean_comment)
+    # clean_comment = remove_stop_words(clean_comment)
     clean_comment = remove_punctuation(clean_comment)
     clean_comment = remove_digits(clean_comment)
-    clean_comment = remove_stop_words(clean_comment)
+    # clean_comment = remove_stop_words(clean_comment)
     # remove punctuatiion once more
-    clean_comment = remove_punctuation(clean_comment)
+    # clean_comment = remove_punctuation(clean_comment)
+    clean_comment = replace_marks_with_tokens(clean_comment)
     return clean_comment
 
 
 def process(series):
-    comment = clean_comment(series['comment_text'])
-    # if comment is not empty
-    if comment:
-        return u'\"{}\"'.format(clean_comment(series['comment_text']).strip('\"'))
+    return u'\"{}\"'.format(clean_comment(series['comment_text']))
 
 
 def call_process(df):

@@ -274,6 +274,13 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
             recurrent_regularizer=regularizers.l2(),
             return_sequences=True),
         merge_mode='concat')(x)
+    x = Bidirectional(
+        CuDNNLSTM(
+            units,
+            kernel_initializer=initializers.he_uniform(),
+            recurrent_regularizer=regularizers.l2(),
+            return_sequences=True),
+        merge_mode='concat')(x)
     avg_pool = GlobalAveragePooling1D()(x)
     max_pool = GlobalMaxPooling1D()(x)
     x = concatenate([avg_pool, max_pool])

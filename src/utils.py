@@ -76,7 +76,8 @@ def load_train_data(train_file, load_augmented_train_data=False):
     """
     Loads train data
     """
-    train_data = pd.read_csv(train_file, dtype={'comment_text': str}).dropna()
+    train_data = pd.read_csv(
+        train_file, encoding='utf-8', dtype={'comment_text': str}).dropna()
     train_data = train_data.drop(
         train_data[train_data['comment_text'].str.len() < 4].index)
     if load_augmented_train_data:
@@ -84,7 +85,8 @@ def load_train_data(train_file, load_augmented_train_data=False):
         prefix = path.splitext(train_file)[0]
         for suffix in AUGMENTED_TRAIN_FILES:
             data = pd.read_csv(
-                prefix + suffix, dtype={'comment_text': str}).dropna()
+                prefix + suffix, encoding='utf-8', dtype={'comment_text':
+                                                          str}).dropna()
             data = data.drop(data[data['comment_text'].str.len() < 4].index)
             corpus.append(data)
         # merge augmented and raw train data
@@ -98,10 +100,11 @@ def load_test_train_data(train_file,
                          num_words=None,
                          max_comment_length=500):
     """
-    Returns test typle and train list
+    Returns test tuple and train list
     """
     train_data = load_train_data(train_file, load_augmented_train_data)
-    test_data = pd.read_csv(test_file, dtype={'comment_text': str})
+    test_data = pd.read_csv(
+        test_file, encoding='utf-8', dtype={'comment_text': str})
     tokenizer = Tokenizer(num_words, oov_token='unk')
     tokenizer.fit_on_texts(
         pd.concat(
