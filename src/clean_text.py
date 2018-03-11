@@ -6,7 +6,10 @@ Usage: python text_cleaner.py [-h]
 Also, it can be imported into another module
 """
 import argparse
-from HTMLParser import HTMLParser
+try:
+    from HTMLParser import HTMLParser
+except ImportError:
+    from html.parser import HTMLParser
 from string import punctuation
 from itertools import groupby
 from os import path
