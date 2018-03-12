@@ -228,7 +228,7 @@ def evaluate_model(data, labels, test_data, word_index, top_words,
     print_statistics('acc ', cvscores['acc'])
     m, s = divmod(clock() - start, 60)
     h, m = divmod(m, 60)
-    print('Time spent is : {}:{}:{} (hh:mm:ss)'.format(int(h), int(m), int(s)))
+    print('Spent time: {}:{}:{} (hh:mm:ss)'.format(int(h), int(m), int(s)))
 
 
 def main():
@@ -237,13 +237,13 @@ def main():
     """
     args = init_argparse().parse_args()
 
-    environ["CUDA_VISIBLE_DEVICES"] = args.gpus
+    environ['CUDA_VISIBLE_DEVICES'] = args.gpus
 
     if not path.isfile(args.train):
         print('Cannot open {} file'.format(args.train))
         return
     print('Loading train and test data')
-    top_words = 100000
+    top_words = 130000
     max_comment_length = 500
     (data, labels), test_data, word_index = load_test_train_data(
         train_file=args.train,

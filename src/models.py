@@ -12,10 +12,9 @@ from keras import initializers
 from keras import constraints
 from keras.models import Sequential, Model
 from keras.layers import (Layer, Dense, CuDNNLSTM, Bidirectional, Dropout,
-                          CuDNNGRU, MaxPooling2D, Input, Activation,
-                          SpatialDropout1D, GlobalAveragePooling1D,
-                          GlobalMaxPooling1D, BatchNormalization, RepeatVector,
-                          MaxPooling1D, concatenate)
+                          CuDNNGRU, MaxPooling2D, Input, SpatialDropout1D,
+                          GlobalAveragePooling1D, GlobalMaxPooling1D,
+                          BatchNormalization, MaxPooling1D, concatenate)
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv1D, Conv2D
 from keras.layers.embeddings import Embedding
