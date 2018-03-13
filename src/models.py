@@ -11,15 +11,14 @@ from keras import regularizers
 from keras import initializers
 from keras import constraints
 from keras.models import Sequential, Model
-from keras.layers import (Layer, Dense, CuDNNLSTM, Bidirectional, Dropout,
-                          CuDNNGRU, MaxPooling2D, Input, SpatialDropout1D,
+from keras.layers import (Dense, CuDNNLSTM, Bidirectional, Dropout, CuDNNGRU,
+                          MaxPooling2D, Input, SpatialDropout1D, Flatten,
                           GlobalAveragePooling1D, GlobalMaxPooling1D,
                           BatchNormalization, MaxPooling1D, concatenate)
 from keras.layers.core import Reshape, Flatten
 from keras.layers.convolutional import Conv1D, Conv2D
 from keras.layers.embeddings import Embedding
 from keras.optimizers import RMSprop, Adam
-from keras.callbacks import Callback
 from keras.utils import multi_gpu_model
 from sklearn.metrics import roc_auc_score
 import numpy as np
@@ -27,112 +26,9 @@ from gensim.models.keyedvectors import KeyedVectors
 from utils import (WORD2VEC_MODEL_PATH, GLOVE_6B_MODEL_PATH,
                    GLOVE_840B_MODEL_PATH, FAST_TEXT_MODEL_PATH, PICKLES_PATH,
                    try_makedirs)
+from custom_layers import Capsule, Attention
 
 EMBEDDING_DIM = 300
-
-
-class IntervalEvaluation(Callback):  # pylint: disable=R0903
-    """Computes ROC AUC metrics"""
-
-    def __init__(self, validation_data=()):
-        super(Callback, self).__init__()  # pylint: disable=E1003
-
-        self.x_val, self.y_val = validation_data
-        self.aucs = []
-
-    def on_epoch_end(self, epoch, logs={}):
-        """
-        Count ROC AUC score at the end of each epoch
-        """
-        y_pred = None
-        if hasattr(self.model, 'predict_proba'):
-            # for Sequentional models
-            y_pred = self.model.predict_proba(self.x_val, verbose=0)
-        else:
-            # for models that was created using functional API
-            y_pred = self.model.predict(self.x_val, verbose=0)
-        self.aucs.append(roc_auc_score(self.y_val, y_pred))
-        print(
-            '\repoch: {:d} - ROC AUC: {:.6f}'.format(epoch + 1, self.aucs[-1]))
-
-
-class Attention(Layer):
-
-    def __init__(self,
-                 step_dim,
-                 W_regularizer=None,
-                 b_regularizer=None,
-                 W_constraint=None,
-                 b_constraint=None,
-                 bias=True,
-                 **kwargs):
-        self.supports_masking = True
-        self.init = initializers.get('glorot_uniform')
-
-        self.W_regularizer = regularizers.get(W_regularizer)
-        self.b_regularizer = regularizers.get(b_regularizer)
-
-        self.W_constraint = constraints.get(W_constraint)
-        self.b_constraint = constraints.get(b_constraint)
-
-        self.bias = bias
-        self.step_dim = step_dim
-        self.features_dim = 0
-        super(Attention, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        assert len(input_shape) == 3
-
-        self.W = self.add_weight(
-            (input_shape[-1],),
-            initializer=self.init,
-            name='{}_W'.format(self.name),
-            regularizer=self.W_regularizer,
-            constraint=self.W_constraint)
-        self.features_dim = input_shape[-1]
-
-        if self.bias:
-            self.b = self.add_weight(
-                (input_shape[1],),
-                initializer='zero',
-                name='{}_b'.format(self.name),
-                regularizer=self.b_regularizer,
-                constraint=self.b_constraint)
-        else:
-            self.b = None
-
-        self.built = True
-
-    def compute_mask(self, input, input_mask=None):
-        return None
-
-    def call(self, x, mask=None):
-        features_dim = self.features_dim
-        step_dim = self.step_dim
-
-        eij = K.reshape(
-            K.dot(
-                K.reshape(x, (-1, features_dim)),
-                K.reshape(self.W, (features_dim, 1))), (-1, step_dim))
-
-        if self.bias:
-            eij += self.b
-
-        eij = K.tanh(eij)
-
-        a = K.exp(eij)
-
-        if mask is not None:
-            a *= K.cast(mask, K.floatx())
-
-        a /= K.cast(K.sum(a, axis=1, keepdims=True) + K.epsilon(), K.floatx())
-
-        a = K.expand_dims(a)
-        weighted_input = x * a
-        return K.sum(weighted_input, axis=1)
-
-    def compute_output_shape(self, input_shape):
-        return input_shape[0], self.features_dim
 
 
 def get_gpus(gpus):
@@ -199,9 +95,9 @@ def cnn(top_words,
     Params:
     - top_words - load the dataset but only keep the top n words, zero the rest
     """
-    inputs = Input(shape=(sequence_length,))
-    embedding = get_pretrained_embedding(top_words, sequence_length, word_index,
-                                         pretrained)(inputs)
+    inputs = Input(shape=(sequence_length, ))
+    embedding = get_pretrained_embedding(top_words, sequence_length,
+                                         word_index, pretrained)(inputs)
     reshape = Reshape((sequence_length, EMBEDDING_DIM, 1))(embedding)
 
     conv_0 = Conv2D(
@@ -226,10 +122,11 @@ def cnn(top_words,
 
     merged_tensor = concatenate([maxpool_0, maxpool_1, maxpool_2], axis=1)
     flatten = Flatten()(merged_tensor)
-    reshape = Reshape((3 * num_filters,))(flatten)
+    reshape = Reshape((3 * num_filters, ))(flatten)
     dropout = Dropout(drop)(reshape)
     output = Dense(
-        units=6, activation='sigmoid',
+        units=6,
+        activation='sigmoid',
         kernel_regularizer=regularizers.l2(0.01))(dropout)
 
     gpus = get_gpus(gpus)
@@ -260,12 +157,12 @@ def lstm(top_words, sequence_length, word_index, gpus, pretrained=None):
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     units = 256
-    inputs = Input(shape=(sequence_length,), dtype='int32')
+    inputs = Input(shape=(sequence_length, ), dtype='int32')
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
+    x = SpatialDropout1D(0.2)(x)
     # For mor detais about kernel_constraint - see chapter 5.1
     # in http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf
-    x = SpatialDropout1D(0.2)(x)
     x = Bidirectional(
         CuDNNLSTM(
             units,
@@ -314,7 +211,7 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
     - pretrained - None, 'word2vec', 'glove6B', 'glove840B', 'fasttext'
     """
     units = 256
-    inputs = Input(shape=(sequence_length,))
+    inputs = Input(shape=(sequence_length, ))
     x = get_pretrained_embedding(top_words, sequence_length, word_index,
                                  pretrained)(inputs)
     x = SpatialDropout1D(0.2)(x)
@@ -325,46 +222,10 @@ def gru(top_words, sequence_length, gpus, word_index, pretrained=None):
             recurrent_regularizer=regularizers.l2(),
             return_sequences=True),
         merge_mode='concat')(x)
-    # x = Dropout(0.5)(x)
-    tower_1 = Conv1D(
-        filters=64,
-        kernel_size=1,
-        padding='valid',
-        activation='relu',
-        kernel_initializer=initializers.he_uniform())(x)
-    tower_1 = Conv1D(
-        filters=64,
-        kernel_size=3,
-        padding='valid',
-        activation='relu',
-        kernel_initializer=initializers.he_uniform())(tower_1)
-    tower_2 = Conv1D(
-        filters=64,
-        kernel_size=1,
-        padding='valid',
-        activation='relu',
-        kernel_initializer=initializers.he_uniform())(x)
-    tower_2 = Conv1D(
-        filters=64,
-        kernel_size=5,
-        padding='valid',
-        activation='relu',
-        kernel_initializer=initializers.he_uniform())(tower_2)
-    tower_3 = MaxPooling1D(pool_size=3, strides=1)(x)
-    tower_3 = Conv1D(
-        filters=64,
-        kernel_size=1,
-        padding='valid',
-        activation='relu',
-        kernel_initializer=initializers.he_uniform())(tower_3)
-    x = concatenate([tower_1, tower_2, tower_3], axis=1)
-    att = Attention(1492)(x)
-    att = Dropout(0.2)(att)
-    avg_pool = GlobalAveragePooling1D()(x)
-    avg_pool = Dropout(0.2)(avg_pool)
-    max_pool = GlobalMaxPooling1D()(x)
-    max_pool = Dropout(0.2)(max_pool)
-    x = concatenate([att, avg_pool, max_pool])
+    x = Capsule(
+        num_capsule=20, dim_capsule=32, routings=10, share_weights=True)(x)
+    x = Flatten()(x)
+    x = Dropout(0.25)(x)
     outputs = Dense(6, activation='sigmoid')(x)
 
     gpus = get_gpus(gpus)
@@ -418,8 +279,8 @@ def get_pretrained_embedding(top_words, sequence_length, word_index,
             embedding_vector = word_vectors[word]
             embedding_matrix[i] = embedding_vector
         except KeyError:
-            embedding_matrix[i] = np.random.normal(0,
-                                                   np.sqrt(0.25), EMBEDDING_DIM)
+            embedding_matrix[i] = np.random.normal(0, np.sqrt(0.25),
+                                                   EMBEDDING_DIM)
 
     return Embedding(
         input_dim=top_words,
@@ -436,8 +297,8 @@ def load_txt_model(model_path):
     where numbers are separated with spaces
     """
     try_makedirs(PICKLES_PATH)
-    pickled_model = path.join(PICKLES_PATH,
-                              '{}.pickle'.format(path.basename(model_path)))
+    pickled_model = path.join(PICKLES_PATH, '{}.pickle'.format(
+        path.basename(model_path)))
     try:
         # load ready text model
         with open(pickled_model, 'rb') as model:
