@@ -42,6 +42,9 @@ MARKS = {r'[\s]+.': '. ', r',': ', ', r'?': '? ', r'!': '! '}
 PUNCTUATION = set(punctuation)  # string of ASCII punctuation
 EXCLAMATION_TOKEN = ' exclmrk '
 QUESTION_TOKEN = ' qstmrk '
+DOLLAR_TOKEN = ' dlrmrk '
+HASH_TOKEN = ' hshmrk '
+AT_TOKEN = ' atmrk '
 
 
 def init_argparse():
@@ -106,7 +109,7 @@ def remove_punctuation(comment):
     Returns clean comment
     """
     # removes other punctuation
-    new_comment = re.sub(r"[^\w\s!?,.']", ' ', comment)
+    new_comment = re.sub(r"[^\w\s!?,.'$#@]", ' ', comment)
     # removes duplicate punctuation
     new_comment = re.sub(r"([\s,.'])\1+", r'\1', new_comment)
     # remove spaces before punctuation
@@ -183,7 +186,12 @@ def remove_stop_words(comment):
     return ' '.join(new_comment)
 
 
-def replace_marks_with_tokens(comment, exclamation=True, question=True):
+def replace_marks_with_tokens(comment,
+                              exclamation=True,
+                              question=True,
+                              dollar=True,
+                              hash_mrk=True,
+                              at=True):
     """
     '!' -> 'exclmrk', '?' -> 'qstmrk'
 
@@ -194,6 +202,12 @@ def replace_marks_with_tokens(comment, exclamation=True, question=True):
         new_comment = new_comment.replace('!', EXCLAMATION_TOKEN)
     if question:
         new_comment = new_comment.replace('?', QUESTION_TOKEN)
+    if dollar:
+        new_comment = new_comment.replace('$', DOLLAR_TOKEN)
+    if hash_mrk:
+        new_comment = new_comment.replace('#', HASH_TOKEN)
+    if at:
+        new_comment = new_comment.replace('@', AT_TOKEN)
     return new_comment
 
 

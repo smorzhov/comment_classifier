@@ -269,7 +269,7 @@ def main():
         return
     print('Loading train and test data')
     top_words = 130000
-    max_comment_length = 500
+    max_comment_length = 150
     (data, labels), test_data, word_index = load_test_train_data(
         train_file=args.train,
         test_file=args.test,
